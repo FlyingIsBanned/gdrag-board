@@ -241,14 +241,32 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .foot h2{font-size:15px}
 
 /* side speech bubble */
-.bubble{position:relative; justify-self:end; width:min(100%,240px); padding:14px 18px; background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 6px 18px rgba(0,0,0,.08); font-size:14px; color:var(--ink-2)}
-.bubble::after{content:""; position:absolute; top:-9px; right:28px; width:16px; height:16px; background:var(--surface); border-left:1px solid var(--line); border-top:1px solid var(--line); transform:rotate(45deg)}
-.bubble h2{font-size:15px; color:var(--ink); margin-bottom:8px}
-.bubble ol{margin:0; padding-left:22px; display:grid; gap:2px}
-@media (min-width:1660px){
-  .bubble{position:fixed; top:120px; right:24px; z-index:5}
-  .bubble::after{top:28px; right:auto; left:-9px; border-top:0; border-bottom:1px solid var(--line)}
+.bubble{--tail:12px; position:relative; justify-self:end; width:min(100%,270px); margin-top:calc(var(--tail) - 8px); padding:16px 18px 12px; background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  box-shadow:0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent), 0 10px 24px -12px color-mix(in srgb, var(--ink) 22%, transparent); display:grid; gap:10px}
+.bubble::before,.bubble::after{content:""; position:absolute; right:32px; border:var(--tail) solid transparent; border-top:0}
+.bubble::before{top:calc(-1 * var(--tail)); border-bottom-color:var(--line)}
+.bubble::after{top:calc(-1 * var(--tail) + 1.5px); border-bottom-color:var(--surface)}
+.bubble h2{font-size:16px; white-space:nowrap; line-height:1.25; color:var(--ink); display:flex; align-items:center; gap:8px}
+.bubble h2::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--bad); flex:none}
+.bubble ol{list-style:none; margin:0; padding:0; counter-reset:hate}
+.bubble li{counter-increment:hate; display:grid; grid-template-columns:22px 1fr; align-items:baseline; gap:8px; padding:6px 0; border-top:1px solid var(--line); font-size:14px; color:var(--ink-2)}
+.bubble li:first-child{border-top:0; color:var(--ink); font-weight:600}
+.bubble li::before{content:counter(hate); font-family:var(--display); font-weight:700; font-size:15px; color:var(--ink-3); text-align:center}
+.bubble li:first-child::before{color:var(--bad); font-size:17px}
+@media (min-width:1740px){
+  .bubble{position:fixed; top:214px; left:calc(50% + 590px + 22px); width:260px; margin:0; z-index:5}
+  .bubble h2{white-space:normal}
+  .bubble::before,.bubble::after{right:auto; top:22px; border:var(--tail) solid transparent; border-left:0}
+  .bubble::before{left:calc(-1 * var(--tail)); border-right-color:var(--line)}
+  .bubble::after{left:calc(-1 * var(--tail) + 1.5px); border-right-color:var(--surface)}
 }
+@media (min-width:921px) and (max-width:1739px){
+  .bubble{width:100%; grid-template-columns:auto 1fr; align-items:center; gap:10px 24px; padding:12px 18px}
+  .bubble ol{display:flex; flex-wrap:wrap; gap:6px 0}
+  .bubble li{display:flex; gap:8px; padding:2px 16px; border-top:0; border-left:1px solid var(--line)}
+  .bubble li:first-child{border-left:0; padding-left:0}
+}
+@media (max-width:920px){ .bubble{width:100%} .bubble::before,.bubble::after{right:auto; left:32px} }
 
 @media (max-width:920px){
   .bz-row{grid-template-columns:repeat(2,minmax(0,1fr))}
