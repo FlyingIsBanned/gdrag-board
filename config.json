@@ -1,0 +1,10 @@
+{
+  "players": ["YOUR_MINECRAFT_USERNAME"],
+  "petTypes": ["GOLDEN_DRAGON"],
+  "petUuids": [],
+  "bazaar": [
+    { "id": "DERELICT_ASHE", "name": "Derelict Ashe", "kind": "Bazaar item" },
+    { "id": "ESSENCE_CRIMSON", "name": "Crimson Essence", "kind": "Essence" },
+    { "id": "ENCHANTMENT_ULTIMATE_CHIMERA_1", "name": "Chimera I", "kind": "Ultimate enchanted book" }
+  ]
+}

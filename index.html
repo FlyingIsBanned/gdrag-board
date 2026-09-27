@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GDrag Flip Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F3F6; --surface:#FFFFFF; --surface-2:#ECEEF3; --line:#DADDE4;
+  --ink:#15171C; --ink-2:#4A4F5B; --ink-3:#737987;
+  --gold:#9A6B00; --gold-soft:#F7EACB; --legend:#C27F00;
+  --buy:#1F6FB2; --good:#1D8349; --bad:#BF3A2F; --warn:#A06C00;
+  --r-common:#666B75; --r-uncommon:#2C8A3A; --r-rare:#2F55D4; --r-epic:#8A2BB0; --r-legendary:#C27F00; --r-mythic:#B8349F;
+  --display:"Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1014; --surface:#161920; --surface-2:#1D2129; --line:#2A2F3A;
+    --ink:#ECEAE4; --ink-2:#B3B6BF; --ink-3:#7F8491;
+    --gold:#E9B949; --gold-soft:#372C12; --legend:#FFAA00;
+    --buy:#67AEEA; --good:#52C483; --bad:#F2705F; --warn:#E6B450;
+    --r-common:#B9BCC4; --r-uncommon:#5DD46B; --r-rare:#7890FF; --r-epic:#C274EC; --r-legendary:#FFAA00; --r-mythic:#FF6BE8;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg); color:var(--ink); font:15px/1.5 var(--body); -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px; margin:0 auto; padding-inline:clamp(16px,4vw,32px); padding-block:28px 56px; display:grid; gap:24px}
+h1,h2,h3{font-family:var(--display); margin:0; text-wrap:balance; letter-spacing:.01em}
+h1{font-size:clamp(28px,4.4vw,38px); font-weight:700; line-height:1.1}
+h2{font-size:22px; font-weight:700}
+h3{font-size:17px; font-weight:600}
+p{margin:0}
+.eyebrow,.label{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); font-weight:500}
+.muted{color:var(--ink-3); font-family:var(--body); font-weight:400; font-size:13px; letter-spacing:0}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+/* header + live status */
+.top{display:flex; flex-wrap:wrap; gap:16px 32px; justify-content:space-between; align-items:flex-end}
+.top .title{display:grid; gap:6px; max-width:62ch}
+.lede{color:var(--ink-2)}
+.status{display:grid; gap:8px; justify-items:start}
+.chip{display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border:1px solid var(--line); border-radius:999px; background:var(--surface); font-size:13px; color:var(--ink-2)}
+.chip b{color:var(--ink); font-weight:600}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--ink-3); flex:none}
+.dot.live{background:var(--good); animation:pulse 2.4s infinite}
+.dot.load{background:var(--warn)}
+.dot.err{background:var(--bad)}
+.dot.paused{background:var(--ink-3)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--good) 55%, transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+/* panels */
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:clamp(16px,3vw,24px); display:grid; gap:20px; min-width:0}
+.section-head{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between}
+.rules{display:flex; flex-wrap:wrap; gap:6px}
+.tag{display:inline-flex; align-items:center; padding:2px 9px; border-radius:999px; background:var(--surface-2); font-size:12px; color:var(--ink-2); white-space:nowrap}
+.tag.auction{background:var(--gold-soft); color:var(--gold)}
+.tag.new{background:color-mix(in srgb, var(--good) 16%, transparent); color:var(--good); font-weight:600}
+
+.progress{display:grid; gap:6px}
+.progress .track{height:6px; border-radius:3px; background:var(--surface-2); overflow:hidden}
+.progress .track i{display:block; height:100%; width:0; background:var(--gold); transition:width .3s ease}
+.progress span{font-size:13px; color:var(--ink-2)}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px}
+.tile{background:var(--surface-2); border-radius:10px; padding:14px 16px; display:grid; gap:4px; align-content:start}
+.tile .big{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:28px; font-weight:500; line-height:1.2}
+.tile.hero .big{color:var(--gold)}
+.tile .sub{font-size:13px; color:var(--ink-2)}
+.tile .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:4px}
+.mini{width:100%; height:36px; display:block; margin-top:8px}
+.tile .mini-note{font-size:12px; color:var(--ink-3)}
+
+/* dropdowns */
+.drops{display:grid; gap:12px}
+.drop{border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden; min-width:0}
+.drop summary{list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:14px 16px; user-select:none}
+.drop summary::-webkit-details-marker{display:none}
+.drop summary:hover{background:color-mix(in srgb, var(--surface-2) 70%, transparent)}
+.drop summary:focus-visible{outline:2px solid var(--gold); outline-offset:-2px; border-radius:12px}
+.drop[open] summary{border-bottom:1px solid var(--line)}
+.sum-main{display:grid; gap:1px; flex:1 1 240px; min-width:0}
+.sum-title{font-family:var(--display); font-weight:600; font-size:17px}
+.sum-stat{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:14px; padding:4px 12px; border:1px solid var(--line); border-radius:999px; white-space:nowrap}
+.chev{width:9px; height:9px; border-right:2px solid var(--ink-3); border-bottom:2px solid var(--ink-3); transform:translateY(-2px) rotate(45deg); transition:transform .2s ease; margin-inline:4px 6px; flex:none}
+.drop[open] .chev{transform:translateY(2px) rotate(225deg)}
+.drop-body{animation:drop-in .18s ease-out}
+.drop-body .note{padding:10px 16px 14px}
+@keyframes drop-in{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
+
+/* tables */
+.scroll{overflow-x:auto}
+table{width:100%; border-collapse:collapse; font-size:14px}
+th{text-align:left; font-weight:500; color:var(--ink-3); font-size:12px; text-transform:uppercase; letter-spacing:.06em; padding:9px 12px; border-bottom:1px solid var(--line); white-space:nowrap; background:var(--surface)}
+td{padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:color-mix(in srgb, var(--surface-2) 60%, transparent)}
+th.num,td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums}
+th.num{font-family:var(--body)}
+td.empty{text-align:center; color:var(--ink-3); padding:22px 12px; white-space:normal}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.rank{font-family:var(--display); font-weight:700; color:var(--gold); font-size:16px}
+.dragon{display:grid; gap:5px}
+.dragon .name{display:flex; gap:8px; align-items:center}
+.lvl{font-family:var(--display); font-weight:600; color:var(--legend)}
+.exact{font-family:var(--mono); font-size:12px; color:var(--ink-3)}
+.bar{height:4px; width:96px; border-radius:2px; background:var(--line); overflow:hidden}
+.bar i{display:block; height:100%; background:var(--legend)}
+th button{all:unset; cursor:pointer; display:inline-flex; gap:4px; align-items:center}
+th button:focus-visible{outline:2px solid var(--gold); outline-offset:2px; border-radius:3px}
+th[aria-sort] button::after{content:"↕"; opacity:.35; font-size:11px}
+th[aria-sort="ascending"] button::after{content:"↑"; opacity:1}
+th[aria-sort="descending"] button::after{content:"↓"; opacity:1}
+button.copy{font:500 12px var(--body); padding:4px 9px; border:1px solid var(--line); background:transparent; color:var(--ink-2); border-radius:6px; cursor:pointer; white-space:nowrap}
+button.copy:hover{border-color:var(--gold); color:var(--ink)}
+button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.note{font-size:13px; color:var(--ink-3)}
+
+/* bazaar */
+.bz{display:grid; gap:12px}
+.bz-row{border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:14px 20px; align-items:start;
+  grid-template-columns:minmax(170px,1fr) minmax(150px,1fr) minmax(150px,1fr) minmax(200px,1.3fr)}
+.bz-name{display:grid; gap:3px; align-content:start}
+.bz-name .id{font-family:var(--mono); font-size:11px; color:var(--ink-3); overflow-wrap:anywhere}
+.pb{background:var(--surface-2); border-radius:10px; padding:12px 14px; display:grid; gap:2px; min-width:0}
+.pb .val{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:20px; font-weight:500; overflow-wrap:anywhere; justify-self:start; border-radius:4px; padding-inline:4px; margin-inline:-4px}
+.pb.buy .val{color:var(--buy)}
+.pb.sell .val{color:var(--gold)}
+.pb .sub{font-size:12px; color:var(--ink-3); display:flex; flex-wrap:wrap; gap:2px 8px}
+.val.up{animation:flash-up 1.8s ease-out}
+.val.down{animation:flash-down 1.8s ease-out}
+@keyframes flash-up{from{background:color-mix(in srgb, var(--good) 30%, transparent)} to{background:transparent}}
+@keyframes flash-down{from{background:color-mix(in srgb, var(--bad) 30%, transparent)} to{background:transparent}}
+.delta{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.delta.up{color:var(--good)} .delta.down{color:var(--bad)}
+.spark{display:grid; gap:4px; min-width:0}
+.spark .spread{font-size:13px; color:var(--ink-2)}
+.spark svg{width:100%; height:56px; display:block}
+.spark .legend{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--ink-3)}
+.spark .legend i{display:inline-block; width:10px; height:3px; border-radius:2px; vertical-align:middle; margin-right:5px}
+.bz-meta{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px 28px; font-size:13px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:12px}
+.bz-meta b{font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:500; color:var(--ink-2)}
+
+/* pet tracker */
+.btn{font:600 14px var(--body); padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; white-space:nowrap}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.btn.small{font-size:12px; padding:5px 11px}
+.btn.on{background:var(--gold-soft); color:var(--gold); border-color:transparent; cursor:default}
+.btn.warn{color:var(--bad); border-color:color-mix(in srgb, var(--bad) 45%, transparent)}
+.btn:disabled{opacity:.55; cursor:not-allowed}
+.btn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:16px; padding:16px}
+.field{display:grid; gap:6px; align-content:start}
+.field input,.toolbar select{font:14px var(--mono); padding:9px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); min-width:0; width:100%}
+.toolbar select{width:auto; font-family:var(--body)}
+.field input:focus-visible,.toolbar select:focus-visible{outline:2px solid var(--gold); outline-offset:1px}
+.input-row{display:flex; gap:8px}
+.hint{font-size:12px; color:var(--ink-3)}
+.actions{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px}
+.error{padding:10px 14px; border-radius:8px; background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); font-size:13px}
+.toolbar{display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line)}
+.check{display:inline-flex; gap:8px; align-items:center; font-size:13px; color:var(--ink-2); cursor:pointer}
+.check input{accent-color:var(--gold); width:16px; height:16px}
+.pet-name{font-family:var(--display); font-weight:600}
+.r-COMMON{color:var(--r-common)} .r-UNCOMMON{color:var(--r-uncommon)} .r-RARE{color:var(--r-rare)}
+.r-EPIC{color:var(--r-epic)} .r-LEGENDARY{color:var(--r-legendary)} .r-MYTHIC{color:var(--r-mythic)}
+.tracked{display:grid; gap:12px}
+.empty-card{border:1px dashed var(--line); border-radius:12px; padding:18px; color:var(--ink-2); font-size:14px}
+.pet-card{border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:14px}
+.pet-card header{display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 16px; align-items:flex-start}
+.pet-card header > div{display:grid; gap:3px}
+.pet-card h3{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; font-size:19px}
+.pet-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:10px}
+.stat{background:var(--surface-2); border-radius:10px; padding:12px 14px; display:grid; gap:2px; align-content:start}
+.stat .big{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:22px; font-weight:500}
+.stat .sub{font-size:12px; color:var(--ink-2)}
+.daily{display:grid; gap:8px}
+.daily-head{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline; justify-content:space-between}
+.bars{display:grid; gap:6px; height:120px}
+.bar-col{display:flex; flex-direction:column; gap:4px; min-width:0}
+.bar-track{flex:1; display:flex; align-items:flex-end; border-bottom:1px solid var(--line)}
+.bar-v{display:block; width:100%; background:var(--legend); border-radius:3px 3px 0 0; min-height:2px}
+.bar-v.today{opacity:.5}
+.bar-v.none{height:10px; background:none; border:1px dashed var(--line); border-bottom:0}
+.bar-d{font-family:var(--mono); font-size:11px; color:var(--ink-3); text-align:center}
+
+.foot{display:grid; gap:8px; font-size:13px; color:var(--ink-2); max-width:78ch}
+.foot h2{font-size:15px}
+
+@media (max-width:920px){
+  .bz-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bz-name,.spark{grid-column:1 / -1}
+}
+@media (max-width:760px){ .opt{display:none} }
+@media (max-width:520px){
+  .bz-row{grid-template-columns:1fr}
+  .tile .big{font-size:24px}
+}
+@media (prefers-reduced-motion: reduce){
+  .dot.live,.drop-body,.val.up,.val.down{animation:none}
+  .chev,.progress .track i{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <p class="eyebrow">Hypixel SkyBlock · live public API</p>
+      <h1>GDrag Flip Board</h1>
+      <p class="lede">Golden Dragons worth levelling to 200, bazaar prices for Derelict Ashe, Crimson Essence and Chimera I, and a pet XP tracker. Prices update live while you watch, and an hourly job keeps saving history when nobody has it open.</p>
+    </div>
+    <div class="status" aria-live="polite">
+      <span class="chip" id="ah-chip"><i class="dot load"></i><span>Auction house · starting</span></span>
+      <span class="chip" id="bz-chip"><i class="dot load"></i><span>Bazaar · starting</span></span>
+      <span class="chip" id="col-chip"><i class="dot load"></i><span>Hourly job · loading</span></span>
+    </div>
+  </header>
+
+  <section class="panel" id="dragon" aria-labelledby="dragon-h">
+    <div class="section-head">
+      <h2 id="dragon-h">Golden Dragon</h2>
+      <div class="rules"><span class="tag">No pet candies</span><span class="tag">No skins</span><span class="tag">Lvl 100 and up</span></div>
+    </div>
+    <div class="progress" id="scan"><div class="track"><i></i></div><span>Scanning the auction house…</span></div>
+    <div class="tiles" id="tiles"></div>
+
+    <div class="drops">
+      <details class="drop" id="drop-top5" open>
+        <summary>
+          <span class="sum-main"><span class="sum-title">Top 5 to level to 200</span><span class="muted">Ranked by profit per level · BIN listings only</span></span>
+          <span class="sum-stat" id="top5-stat">—</span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="drop-body"><div class="scroll"><table id="top5">
+          <thead><tr><th>#</th><th>Dragon</th><th class="num">Price</th><th class="num">Levels to go</th><th class="num opt">XP to go</th><th class="num">Profit</th><th class="num">Profit / level</th><th class="opt">Held item</th><th></th></tr></thead>
+          <tbody><tr><td class="empty" colspan="9">Waiting for the first auction house scan.</td></tr></tbody>
+        </table></div></div>
+      </details>
+
+      <details class="drop" id="drop-all">
+        <summary>
+          <span class="sum-main"><span class="sum-title">Every Lvl 100–199 listing</span><span class="muted" id="all-sub">Click a column heading to sort</span></span>
+          <span class="sum-stat" id="all-stat">—</span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="drop-body">
+          <div class="scroll"><table id="all">
+            <thead><tr>
+              <th aria-sort="descending"><button type="button" data-sort="exp">Dragon</button></th>
+              <th class="num" aria-sort="none"><button type="button" data-sort="price">Price</button></th>
+              <th class="num" aria-sort="none"><button type="button" data-sort="lvLeft">Levels to go</button></th>
+              <th class="num" aria-sort="none"><button type="button" data-sort="profit">Profit</button></th>
+              <th class="num" aria-sort="none"><button type="button" data-sort="ppl">Profit / level</button></th>
+              <th class="opt">Held item</th>
+              <th class="num opt" aria-sort="none"><button type="button" data-sort="end">Ends in</button></th>
+              <th></th>
+            </tr></thead>
+            <tbody><tr><td class="empty" colspan="8">Waiting for the first auction house scan.</td></tr></tbody>
+          </table></div>
+          <p class="note" id="excluded"></p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="panel" id="bazaar" aria-labelledby="bz-h">
+    <div class="section-head">
+      <h2 id="bz-h">Bazaar</h2>
+      <span class="muted">Best prices on the order book · ▲▼ shows the latest change</span>
+    </div>
+    <div class="bz" id="bz"></div>
+  </section>
+
+  <section class="panel" id="tracker" aria-labelledby="pt-h">
+    <div class="section-head">
+      <h2 id="pt-h">Pet XP tracker</h2>
+      <span class="muted" id="pt-sub">Checked every hour by GitHub Actions</span>
+    </div>
+    <p class="error" id="pt-error" role="alert" hidden></p>
+    <div class="tracked" id="pt-tracked"><div class="empty-card">Loading saved tracker data…</div></div>
+  </section>
+
+  <footer class="foot">
+    <h2>How the numbers work</h2>
+    <p><b>Levels to go</b> uses each pet's exact XP. From level 100 to 200 every level costs the same 1,886,700 pet XP, so a Lvl 137 that is partway to 138 needs fewer than 63 levels.</p>
+    <p><b>Profit</b> is the cheapest Lvl 200 BIN (no candies, no skin) minus the dragon's price. Auction house fees are not taken off. <b>Profit / level</b> is profit divided by levels to go.</p>
+    <p>Only BIN listings are ranked in the top 5. Regular auctions are tagged <b>Auction</b> in the full list and show their current bid, which can still go up. <b>New</b> marks a listing that appeared in the last 15 minutes. Use <b>Copy</b> to get a <span class="mono">/viewauction</span> command you can paste in game.</p>
+    <p><b>Bazaar:</b> the buy order is the highest price someone is bidding, which is what you get if you instant-sell. The sell order is the lowest price someone is asking, which is what you pay if you instant-buy.</p>
+    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every hour, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there. Following Hypixel's API rules, each player is checked at most once an hour. The same job saves hourly bazaar prices and Golden Dragon prices for the 7-day lines.</p>
+    <p>Updates: the auction house API refreshes once a minute and the bazaar about every 20 seconds. The page checks right after each refresh, re-scans every auction every 5 minutes, and pauses while the tab is hidden.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- constants ----------
+const API = 'https://api.hypixel.net/v2/skyblock';
+const XP_100 = 25353230;            // total pet XP at Lvl 100 (legendary)
+const XP_PER_LEVEL = 1886700;       // every level 101-200 costs this much for Golden Dragon
+const XP_200 = XP_100 + 100 * XP_PER_LEVEL;
+const AH_STEP = 60e3, AH_FULL_EVERY = 5 * 60e3, BZ_STEP = 20e3;
+const NEW_FOR = 15 * 60e3, DELTA_FOR = 2 * 60e3;
+const BZ_ITEMS = [
+  { id: 'DERELICT_ASHE', name: 'Derelict Ashe', kind: 'Bazaar item' },
+  { id: 'ESSENCE_CRIMSON', name: 'Crimson Essence', kind: 'Essence' },
+  { id: 'ENCHANTMENT_ULTIMATE_CHIMERA_1', name: 'Chimera I', kind: 'Ultimate enchanted book' },
+];
+
+// ---------- state ----------
+const S = {
+  dragons: new Map(),
+  seen: new Map(),                   // uuid -> first time seen (0 = was there when the page opened)
+  ah: { snapshot: 0, fullAt: 0, syncAt: 0, nextAt: 0, status: 'load', error: '', scanning: false, page: 0, total: 0, busy: false, baseline: false },
+  bz: { snapshot: 0, nextAt: 0, status: 'load', error: '', items: {}, hist: {}, change: {}, busy: false },
+  sort: { key: 'exp', dir: -1 },
+};
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const trim0 = x => x.replace(/\.?0+$/, '');
+function short(n) {
+  if (n == null || !isFinite(n)) return '—';
+  const a = Math.abs(n), s = n < 0 ? '−' : '';
+  if (a >= 1e9) return s + trim0((a / 1e9).toFixed(3)) + 'B';
+  if (a >= 1e6) return s + trim0((a / 1e6).toFixed(1)) + 'M';
+  if (a >= 1e3) return s + trim0((a / 1e3).toFixed(1)) + 'k';
+  return s + trim0(a.toFixed(1));
+}
+const signed = n => (n > 0 ? '+' : '') + short(n);
+const full = n => (n == null || !isFinite(n)) ? '—' : n.toLocaleString('en-GB', { maximumFractionDigits: 1 });
+const clock = ts => new Date(ts).toLocaleTimeString('en-GB');
+function ago(ts) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  return Math.floor(s / 3600) + 'h ago';
+}
+function until(ts) {
+  const s = Math.round((ts - Date.now()) / 1000);
+  if (s <= 0) return 'now';
+  return s < 90 ? 'in ' + s + 's' : 'in ' + Math.round(s / 60) + 'm';
+}
+function endsIn(ts) {
+  const d = ts - Date.now();
+  if (d <= 0) return 'ended';
+  const m = Math.floor(d / 60000);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ' + (m % 60) + 'm';
+  return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+}
+const pretty = id => id ? id.replace(/^PET_ITEM_/, '').toLowerCase().split('_').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ') : '';
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+async function getJSON(url, tries = 3) {
+  let err;
+  for (let t = 0; t < tries; t++) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 25000);
+    try {
+      const r = await fetch(url, { cache: 'no-store', signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if (j.success === false) throw new Error(j.cause || 'API error');
+      return j;
+    } catch (e) { err = e; await sleep(800 * (t + 1)); }
+    finally { clearTimeout(timer); }
+  }
+  throw err;
+}
+
+// ---------- item_bytes decoding (base64 -> gzip -> NBT) ----------
+const td = new TextDecoder();
+async function gunzip(b64) {
+  const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const buf = await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  return new DataView(buf);
+}
+function parseNBT(dv) {
+  let o = 0;
+  const str = () => { const l = dv.getUint16(o); o += 2; const s = td.decode(new Uint8Array(dv.buffer, dv.byteOffset + o, l)); o += l; return s; };
+  const pl = t => {
+    switch (t) {
+      case 1: { const v = dv.getInt8(o); o += 1; return v; }
+      case 2: { const v = dv.getInt16(o); o += 2; return v; }
+      case 3: { const v = dv.getInt32(o); o += 4; return v; }
+      case 4: { const v = dv.getBigInt64(o); o += 8; return Number(v); }
+      case 5: { const v = dv.getFloat32(o); o += 4; return v; }
+      case 6: { const v = dv.getFloat64(o); o += 8; return v; }
+      case 7: { const l = dv.getInt32(o); o += 4 + l; return null; }
+      case 8: return str();
+      case 9: { const et = dv.getInt8(o); o += 1; const l = dv.getInt32(o); o += 4; const a = []; for (let i = 0; i < l; i++) a.push(pl(et)); return a; }
+      case 10: { const c = {}; for (;;) { const tt = dv.getInt8(o); o += 1; if (tt === 0) break; const n = str(); c[n] = pl(tt); } return c; }
+      case 11: { const l = dv.getInt32(o); o += 4 + 4 * l; return null; }
+      case 12: { const l = dv.getInt32(o); o += 4 + 8 * l; return null; }
+      default: throw new Error('Unknown NBT tag ' + t);
+    }
+  };
+  const t = dv.getInt8(o); o += 1; str();
+  return pl(t);
+}
+
+// ---------- auction house ----------
+async function readDragon(a) {
+  try {
+    const nbt = parseNBT(await gunzip(a.item_bytes));
+    const ea = nbt?.i?.[0]?.tag?.ExtraAttributes;
+    if (!ea || ea.id !== 'PET' || !ea.petInfo) return null;
+    const pi = JSON.parse(ea.petInfo);
+    if (pi.type !== 'GOLDEN_DRAGON') return null;
+    const exp = Number(pi.exp) || 0;
+    const m = a.item_name.match(/\[Lvl (\d+)\]/);
+    const level = m ? +m[1] : (exp >= XP_100 ? Math.min(200, 100 + Math.floor((exp - XP_100) / XP_PER_LEVEL)) : 0);
+    return {
+      uuid: a.uuid, level, exp,
+      candy: pi.candyUsed || 0, skin: pi.skin || null, held: pi.heldItem || null,
+      bin: !!a.bin,
+      price: a.bin ? a.starting_bid : (a.highest_bid_amount || a.starting_bid),
+      bids: Array.isArray(a.bids) ? a.bids.length : 0,
+      end: a.end,
+    };
+  } catch { return null; }
+}
+async function absorb(auctions, into) {
+  const hits = (auctions || []).filter(a => a.item_name && a.item_name.includes('Golden Dragon'));
+  const ds = await Promise.all(hits.map(readDragon));
+  for (const d of ds) if (d) into.set(d.uuid, d);
+}
+function pruneExpired() {
+  const now = Date.now();
+  for (const [k, d] of S.dragons) if (d.end && d.end < now) S.dragons.delete(k);
+}
+function markSeen() {
+  const now = Date.now();
+  for (const k of S.dragons.keys()) if (!S.seen.has(k)) S.seen.set(k, S.ah.baseline ? now : 0);
+  S.ah.baseline = true;
+}
+const isNew = d => { const t = S.seen.get(d.uuid); return t > 0 && Date.now() - t < NEW_FOR; };
+async function fullScan() {
+  S.ah.scanning = true; S.ah.page = 0; S.ah.total = 0; renderStatus();
+  try {
+    const first = await getJSON(`${API}/auctions?page=0`);
+    const found = new Map();
+    S.ah.total = first.totalPages; S.ah.page = 1; renderStatus();
+    await absorb(first.auctions, found);
+    const queue = Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, i) => i + 1);
+    const last = first.totalPages - 1;
+    const worker = async () => {
+      while (queue.length) {
+        const p = queue.shift();
+        try { const j = await getJSON(`${API}/auctions?page=${p}`); await absorb(j.auctions, found); }
+        catch (e) { if (p !== last) throw e; }   // the last page can vanish if the listing count drops mid-scan
+        S.ah.page++; renderStatus();
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
+    S.dragons = found;
+    S.ah.snapshot = first.lastUpdated;
+    S.ah.fullAt = S.ah.syncAt = Date.now();
+    pruneExpired();
+  } finally { S.ah.scanning = false; }
+}
+// Between full scans: page 0 is sorted newest-update first, so new listings and new bids land there.
+// Sold auctions come from auctions_ended (the last 60 s), and expired ones are dropped by end time.
+async function incremental() {
+  const prev = S.ah.snapshot;
+  let j = await getJSON(`${API}/auctions?page=0`);
+  if (j.lastUpdated === prev) return false;
+  const snap = j.lastUpdated, upd = new Map();
+  for (let p = 0; ;) {
+    await absorb(j.auctions, upd);
+    const tail = j.auctions[j.auctions.length - 1];
+    p++;
+    if (!tail || tail.last_updated < prev - 60e3 || p >= j.totalPages || p >= 8) break;
+    j = await getJSON(`${API}/auctions?page=${p}`);
+  }
+  for (const [k, d] of upd) S.dragons.set(k, d);
+  const ended = await getJSON(`${API}/auctions_ended`);
+  for (const e of ended.auctions || []) S.dragons.delete(String(e.auction_id).replace(/-/g, ''));
+  S.ah.snapshot = snap; S.ah.syncAt = Date.now();
+  pruneExpired();
+  return true;
+}
+let ahTimer = 0;
+function ahSchedule(ms) { clearTimeout(ahTimer); S.ah.nextAt = Date.now() + ms; ahTimer = setTimeout(ahTick, ms); }
+async function ahTick() {
+  if (document.hidden || S.ah.busy) return;
+  S.ah.busy = true;
+  let next = 15000;
+  try {
+    const now = Date.now();
+    if (!S.ah.snapshot || now - S.ah.fullAt > AH_FULL_EVERY || now - S.ah.syncAt > 150e3) {
+      await fullScan();
+    } else if (!(await incremental())) {
+      next = 5000;                      // snapshot not refreshed yet, look again shortly
+      throw null;
+    }
+    S.ah.status = 'live'; S.ah.error = '';
+    markSeen();
+    renderDragons();
+    next = clamp(S.ah.snapshot + AH_STEP + 2500 - Date.now(), 3000, AH_STEP);
+  } catch (e) {
+    if (e) { S.ah.status = 'err'; S.ah.error = e.message || String(e); next = 15000; }
+  } finally {
+    S.ah.busy = false;
+    if (!document.hidden) ahSchedule(next);
+    renderStatus();
+  }
+}
+
+// ---------- bazaar ----------
+let bzTimer = 0;
+function bzSchedule(ms) { clearTimeout(bzTimer); S.bz.nextAt = Date.now() + ms; bzTimer = setTimeout(bzTick, ms); }
+async function bzTick() {
+  if (document.hidden || S.bz.busy) return;
+  S.bz.busy = true;
+  let next = 15000;
+  try {
+    const j = await getJSON(`${API}/bazaar`);
+    if (j.lastUpdated !== S.bz.snapshot) {
+      S.bz.snapshot = j.lastUpdated;
+      for (const it of BZ_ITEMS) {
+        const p = j.products?.[it.id];
+        if (!p) { S.bz.items[it.id] = null; continue; }
+        const q = p.quick_status || {};
+        // API naming is from the instant-trade side: sell_summary holds buy orders (highest first),
+        // buy_summary holds sell offers (lowest first).
+        const row = {
+          buyOrder: p.sell_summary?.[0]?.pricePerUnit ?? null,
+          sellOrder: p.buy_summary?.[0]?.pricePerUnit ?? null,
+          buyOrders: q.sellOrders, buyOrderItems: q.sellVolume,
+          sellOrders: q.buyOrders, sellOrderItems: q.buyVolume,
+          instaBoughtWeek: q.buyMovingWeek, instaSoldWeek: q.sellMovingWeek,
+        };
+        const prev = S.bz.items[it.id];
+        const ch = (S.bz.change[it.id] ||= {});
+        if (prev) for (const f of ['buyOrder', 'sellOrder']) {
+          if (prev[f] != null && row[f] != null && row[f] !== prev[f]) ch[f] = { d: row[f] - prev[f], at: j.lastUpdated };
+        }
+        S.bz.items[it.id] = row;
+        const h = (S.bz.hist[it.id] ||= []);
+        h.push({ t: j.lastUpdated, b: row.buyOrder, s: row.sellOrder });
+        if (h.length > 180) h.shift();
+      }
+      renderBazaar();
+      next = clamp(j.lastUpdated + BZ_STEP + 2000 - Date.now(), 3000, BZ_STEP);
+    } else next = 4000;
+    S.bz.status = 'live'; S.bz.error = '';
+  } catch (e) {
+    S.bz.status = 'err'; S.bz.error = e.message || String(e); next = 15000;
+  } finally {
+    S.bz.busy = false;
+    if (!document.hidden) bzSchedule(next);
+    renderStatus();
+  }
+}
+
+// ---------- rendering ----------
+function chip(el, status, html) {
+  el.querySelector('.dot').className = 'dot ' + status;
+  el.querySelector('span').innerHTML = html;
+}
+function renderStatus() {
+  const hidden = document.hidden;
+  const ah = $('#ah-chip'), bz = $('#bz-chip');
+  if (S.ah.scanning) {
+    chip(ah, 'load', `Auction house · scanning page <b>${S.ah.page}</b> of ${S.ah.total || '…'}`);
+  } else if (S.ah.status === 'err') {
+    chip(ah, 'err', `Auction house · can't reach the API (${esc(S.ah.error)}), retrying`);
+  } else if (S.ah.snapshot) {
+    chip(ah, hidden ? 'paused' : 'live', hidden ? 'Auction house · paused while the tab is hidden'
+      : `Auction house · data from <b>${clock(S.ah.snapshot)}</b> · next check <span data-until="${S.ah.nextAt}">${until(S.ah.nextAt)}</span>`);
+  }
+  if (S.bz.status === 'err') {
+    chip(bz, 'err', `Bazaar · can't reach the API (${esc(S.bz.error)}), retrying`);
+  } else if (S.bz.snapshot) {
+    chip(bz, hidden ? 'paused' : 'live', hidden ? 'Bazaar · paused while the tab is hidden'
+      : `Bazaar · updated <b data-ago="${S.bz.snapshot}">${ago(S.bz.snapshot)}</b> · next check <span data-until="${S.bz.nextAt}">${until(S.bz.nextAt)}</span>`);
+  }
+  const scan = $('#scan');
+  scan.hidden = !S.ah.scanning || S.dragons.size > 0;
+  if (S.ah.total) {
+    scan.querySelector('i').style.width = (100 * S.ah.page / S.ah.total).toFixed(1) + '%';
+    scan.querySelector('span').textContent = `Scanning the auction house: page ${S.ah.page} of ${S.ah.total}`;
+  }
+}
+
+function metrics(d, ref) {
+  const xpLeft = Math.max(0, XP_200 - d.exp);
+  const lvLeft = xpLeft / XP_PER_LEVEL;
+  const exact = Math.min(200, 100 + (d.exp - XP_100) / XP_PER_LEVEL);
+  const profit = ref != null ? ref - d.price : null;
+  const ppl = profit != null && lvLeft > 0 ? profit / lvLeft : null;
+  return { xpLeft, lvLeft, exact, profit, ppl };
+}
+const copyBtn = uuid => `<button type="button" class="copy" data-copy="/viewauction ${esc(uuid)}" title="Copy /viewauction command">Copy</button>`;
+const tone = n => n == null ? '' : n >= 0 ? 'pos' : 'neg';
+const heldCell = d => d.held ? `<span class="tag">${esc(pretty(d.held))}</span>` : '<span class="muted">None</span>';
+function dragonCell(d) {
+  const pct = clamp(d.exact - 100, 0, 100);
+  const tags = (isNew(d) ? '<span class="tag new">New</span>' : '') + (d.bin ? '' : `<span class="tag auction">Auction · ${plural(d.bids, 'bid')}</span>`);
+  return `<div class="dragon"><span class="name"><span class="lvl">Lvl ${d.level}</span><span class="exact">${d.exact.toFixed(2)}</span>${tags}</span>` +
+    `<span class="bar" title="${pct.toFixed(1)}% of the way from 100 to 200"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
+}
+
+function renderDragons() {
+  if (!S.ah.snapshot) {
+    const wait = n => `<tr><td class="empty" colspan="${n}">Waiting for the first auction house scan.</td></tr>`;
+    $('#tiles').innerHTML = ['Cheapest Lvl 200', 'Best profit per level', 'Lvl 100–199 listed']
+      .map((l, i) => `<div class="tile${i ? '' : ' hero'}"><span class="label">${l}</span><span class="big">—</span><span class="sub">Scanning…</span></div>`).join('');
+    $('#top5 tbody').innerHTML = wait(9); $('#all tbody').innerHTML = wait(8);
+    $('#top5-stat').textContent = 'Scanning…'; $('#all-stat').textContent = 'Scanning…';
+    $('#excluded').textContent = '';
+    renderStatus();
+    return;
+  }
+  const every = [...S.dragons.values()];
+  const clean = every.filter(d => d.candy === 0 && !d.skin);
+  const l200 = clean.filter(d => d.level >= 200 && d.bin).sort((a, b) => a.price - b.price);
+  const best = l200[0] || null;
+  const ref = best ? best.price : null;
+  const mid = clean.filter(d => d.level >= 100 && d.level < 200).map(d => ({ ...d, ...metrics(d, ref) }));
+  const top = mid.filter(d => d.bin && d.ppl != null).sort((a, b) => b.ppl - a.ppl).slice(0, 5);
+  const bins = mid.filter(d => d.bin).length;
+  const cheapest = mid.length ? Math.min(...mid.map(d => d.price)) : null;
+
+  // tiles
+  const t0 = top[0];
+  $('#tiles').innerHTML = `
+    <div class="tile hero">
+      <span class="label">Cheapest Lvl 200</span>
+      <span class="big" title="${best ? full(best.price) + ' coins' : ''}">${best ? short(best.price) : '—'}</span>
+      <span class="sub">${best ? `${plural(l200.length, 'clean Lvl 200 BIN')} listed${l200[1] ? ` · next cheapest ${short(l200[1].price)}` : ''}` : 'No clean Lvl 200 BIN on the auction house right now'}</span>
+      ${best ? `<div class="row">${best.held ? `<span class="tag">${esc(pretty(best.held))}</span>` : '<span class="tag">No held item</span>'}${copyBtn(best.uuid)}</div>` : ''}
+      ${miniSpark(gdragSeries(1, ref), 'var(--gold)')}${rangeLine(gdragSeries(1, ref), short)}
+    </div>
+    <div class="tile">
+      <span class="label">Best profit per level</span>
+      <span class="big ${tone(t0?.ppl)}">${t0 ? signed(t0.ppl) : '—'}</span>
+      <span class="sub">${t0 ? `Lvl ${t0.level} for ${short(t0.price)}: ${signed(t0.profit)} over ${t0.lvLeft.toFixed(1)} levels` : 'Needs a Lvl 200 price and at least one BIN'}</span>
+      ${miniSpark(gdragSeries(2, t0 ? t0.ppl : null), 'var(--good)')}${rangeLine(gdragSeries(2, t0 ? t0.ppl : null), signed)}
+    </div>
+    <div class="tile">
+      <span class="label">Lvl 100–199 listed</span>
+      <span class="big">${mid.length}</span>
+      <span class="sub">${bins} BIN · ${plural(mid.length - bins, 'regular auction')}</span>
+    </div>`;
+
+  // top 5 dropdown
+  const topStat = $('#top5-stat');
+  topStat.className = 'sum-stat ' + tone(t0?.ppl);
+  topStat.textContent = t0 ? `Best ${signed(t0.ppl)} / level` : 'No picks yet';
+  const topBody = $('#top5 tbody');
+  if (!top.length) {
+    topBody.innerHTML = `<tr><td class="empty" colspan="9">${ref == null ? 'No clean Lvl 200 BIN is listed, so profit can’t be worked out yet.' : 'No clean Lvl 100–199 BIN listings right now.'}</td></tr>`;
+  } else {
+    topBody.innerHTML = top.map((d, i) => `<tr>
+      <td class="rank">${i + 1}</td>
+      <td>${dragonCell(d)}</td>
+      <td class="num" title="${full(d.price)}">${short(d.price)}</td>
+      <td class="num">${d.lvLeft.toFixed(1)}</td>
+      <td class="num opt" title="${full(d.xpLeft)} XP">${short(d.xpLeft)}</td>
+      <td class="num ${tone(d.profit)}" title="${full(d.profit)}">${signed(d.profit)}</td>
+      <td class="num ${tone(d.ppl)}"><b>${signed(d.ppl)}</b></td>
+      <td class="opt">${heldCell(d)}</td>
+      <td>${copyBtn(d.uuid)}</td></tr>`).join('');
+  }
+
+  // every-listing dropdown
+  const { key, dir } = S.sort;
+  const cmp = (a, b) => {
+    const x = a[key], y = b[key];
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;            // missing values always sink to the bottom
+    if (y == null) return -1;
+    return (x - y) * dir;
+  };
+  const rows = [...mid].sort(cmp);
+  const newCount = mid.filter(isNew).length;
+  $('#all-stat').textContent = mid.length ? `${plural(mid.length, 'listing')} · from ${short(cheapest)}${newCount ? ` · ${newCount} new` : ''}` : 'None listed';
+  $('#all-sub').textContent = `Sorted by ${({ exp: 'level', price: 'price', lvLeft: 'levels to go', profit: 'profit', ppl: 'profit per level', end: 'end time' })[key]} · click a column heading to change`;
+  $('#all tbody').innerHTML = rows.length ? rows.map(d => `<tr>
+      <td>${dragonCell(d)}</td>
+      <td class="num" title="${full(d.price)}">${short(d.price)}</td>
+      <td class="num">${d.lvLeft.toFixed(1)}</td>
+      <td class="num ${tone(d.profit)}" title="${full(d.profit)}">${signed(d.profit)}</td>
+      <td class="num ${tone(d.ppl)}">${signed(d.ppl)}</td>
+      <td class="opt">${heldCell(d)}</td>
+      <td class="num opt" data-ends="${d.end}">${endsIn(d.end)}</td>
+      <td>${copyBtn(d.uuid)}</td></tr>`).join('')
+    : '<tr><td class="empty" colspan="8">No clean Lvl 100–199 Golden Dragons are listed right now.</td></tr>';
+  document.querySelectorAll('#all th[aria-sort]').forEach(th => {
+    const k = th.querySelector('button').dataset.sort;
+    th.setAttribute('aria-sort', k === key ? (dir > 0 ? 'ascending' : 'descending') : 'none');
+  });
+
+  const hi = every.filter(d => d.level >= 100);
+  const candies = hi.filter(d => d.candy > 0).length, skins = hi.filter(d => d.candy === 0 && d.skin).length;
+  $('#excluded').textContent = `Left out: ${plural(candies, 'Lvl 100+ Golden Dragon')} with pet candies and ${skins} with a skin.`;
+  renderStatus();
+}
+
+function spark(h) {
+  const pts = h.filter(p => p.b != null && p.s != null);
+  if (pts.length < 2) return `<p class="note">A price line appears once the hourly job has saved some history.</p>`;
+  const W = 300, H = 56, pad = 4;
+  const vals = pts.flatMap(p => [p.b, p.s]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi === lo) { hi += 1; lo -= 1; }
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t || t0 + 1;
+  const x = t => pad + (W - 2 * pad) * ((t - t0) / Math.max(1, t1 - t0));
+  const y = v => pad + (H - 2 * pad) * (1 - (v - lo) / (hi - lo));
+  const line = k => pts.map(p => `${x(p.t).toFixed(1)},${y(p[k]).toFixed(1)}`).join(' ');
+  const span = dur(t1 - t0);
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Buy and sell order prices over the last ${span}">
+      <line x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+      <polyline points="${line('s')}" fill="none" stroke="var(--gold)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      <polyline points="${line('b')}" fill="none" stroke="var(--buy)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    </svg>
+    <div class="legend"><span><i style="background:var(--buy)"></i>Buy order</span><span><i style="background:var(--gold)"></i>Sell order</span><span>last ${span} · ${short(lo)}–${short(hi)}</span></div>`;
+}
+function priceBlock(cls, label, value, hint, c) {
+  const recent = c && S.bz.snapshot - c.at < DELTA_FOR;
+  const dirn = c && c.d > 0 ? 'up' : 'down';
+  const flash = c && c.at === S.bz.snapshot ? ' ' + dirn : '';
+  const delta = recent ? `<span class="delta ${dirn}" title="Change at ${clock(c.at)}">${c.d > 0 ? '▲' : '▼'} ${short(Math.abs(c.d))}</span>` : '';
+  return `<div class="pb ${cls}"><span class="label">${label}</span><span class="val${flash}">${full(value)}</span><span class="sub"><span>${short(value)} · ${hint}</span>${delta}</span></div>`;
+}
+function renderBazaar() {
+  $('#bz').innerHTML = BZ_ITEMS.map(it => {
+    const r = S.bz.items[it.id];
+    const name = `<div class="bz-name"><h3>${esc(it.name)}</h3><span class="muted">${esc(it.kind)}</span><span class="id">${esc(it.id)}</span></div>`;
+    if (r === undefined) return `<article class="bz-row">${name}<p class="note">Loading bazaar prices…</p></article>`;
+    if (r === null) return `<article class="bz-row">${name}<p class="note">This item isn't on the bazaar right now.</p></article>`;
+    const ch = S.bz.change[it.id] || {};
+    const spread = r.buyOrder != null && r.sellOrder != null ? r.sellOrder - r.buyOrder : null;
+    return `<article class="bz-row">${name}
+      ${priceBlock('buy', 'Buy order', r.buyOrder, 'instant-sell gets this', ch.buyOrder)}
+      ${priceBlock('sell', 'Sell order', r.sellOrder, 'instant-buy costs this', ch.sellOrder)}
+      <div class="spark"><span class="spread">Spread <b class="mono">${short(spread)}</b>${spread != null && r.buyOrder ? ` (${(100 * spread / r.buyOrder).toFixed(1)}%)` : ''}</span>${spark(bzSeries(it.id))}</div>
+      <div class="bz-meta">
+        <span>Buy orders <b>${full(r.buyOrders)}</b> for <b>${short(r.buyOrderItems)}</b> items</span>
+        <span>Sell orders <b>${full(r.sellOrders)}</b> for <b>${short(r.sellOrderItems)}</b> items</span>
+        <span>This week: <b>${short(r.instaBoughtWeek)}</b> instant-bought, <b>${short(r.instaSoldWeek)}</b> instant-sold</span>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+// ---------- saved history (written every hour by the GitHub Actions job) ----------
+// Standard pet XP table (XP needed for each next level); rarity picks the starting offset.
+const PET_LEVELS = [100,110,120,130,145,160,175,190,210,230,250,275,300,330,360,400,440,490,540,600,660,730,800,880,960,1050,1150,1260,1380,1510,1650,1800,1960,2130,2310,2500,2700,2920,3160,3420,3700,4000,4350,4750,5200,5700,6300,7000,7800,8700,9700,10800,12000,13300,14700,16200,17800,19500,21300,23200,25200,27400,29800,32400,35200,38200,41400,44800,48400,52200,56200,60400,64800,69400,74200,79200,84700,90700,97200,104200,111700,119700,128200,137200,146700,156700,167700,179700,192700,206700,221700,237700,254700,272700,291700,311700,333700,357700,383700,411700,441700,476700,516700,561700,611700,666700,726700,791700,861700,936700,1016700,1101700,1191700,1286700,1386700,1496700,1616700,1746700,1886700];
+const RARITY_OFFSET = { COMMON: 0, UNCOMMON: 6, RARE: 11, EPIC: 16, LEGENDARY: 20, MYTHIC: 20 };
+const TO_200 = { GOLDEN_DRAGON: 1, JADE_DRAGON: 1, ROSE_DRAGON: 1 };   // levels 101-200 cost 1,886,700 XP each
+function petLevel(type, tier, exp) {
+  const off = type === 'BINGO' ? 0 : (RARITY_OFFSET[tier] ?? 20);
+  const steps = PET_LEVELS.slice(off, off + 99);
+  if (TO_200[type]) for (let i = 0; i < 100; i++) steps.push(XP_PER_LEVEL);
+  const max = steps.length + 1;
+  let rem = exp, level = 1;
+  for (const s of steps) { if (rem < s) break; rem -= s; level++; }
+  const total = steps.reduce((a, b) => a + b, 0);
+  return { level, exact: level >= max ? max : level + rem / steps[level - 1], max, xpToMax: Math.max(0, total - exp) };
+}
+
+const DAY = 864e5, WEEK = 7 * DAY;
+const DATA = { pets: null, bazaar: null, gdrag: null, status: null, loaded: false, loadedAt: 0 };
+async function loadData() {
+  const v = Math.floor(Date.now() / 60e3);   // skip GitHub Pages' 10-minute cache
+  const get = async name => {
+    try { const r = await fetch(`${name}.json?v=${v}`, { cache: 'no-store' }); return r.ok ? await r.json() : null; }
+    catch { return null; }
+  };
+  const [pets, bazaar, gdrag, status, config] = await Promise.all(['data/pets', 'data/bazaar', 'data/gdrag', 'data/status', 'config'].map(get));
+  Object.assign(DATA, { pets, bazaar, gdrag, status, loaded: true, loadedAt: Date.now() });
+  // bazaar items come from config.json, so adding one there shows it here too
+  const items = (config?.bazaar || []).filter(it => it && it.id);
+  if (items.length && JSON.stringify(items.map(i => i.id)) !== JSON.stringify(BZ_ITEMS.map(i => i.id))) {
+    BZ_ITEMS.splice(0, BZ_ITEMS.length, ...items.map(it => ({ id: it.id, name: it.name || pretty(it.id), kind: it.kind || 'Bazaar item' })));
+    S.bz.snapshot = 0;   // refetch so new items get prices straight away
+    bzSchedule(0);
+  }
+  renderCollector(); renderTracker(); renderDragons(); renderBazaar();
+}
+function renderCollector() {
+  const c = $('#col-chip'), st = DATA.status;
+  if (!st) { chip(c, 'paused', 'Hourly job · no saved data yet'); c.title = 'The hourly GitHub job hasn’t saved anything yet.'; return; }
+  const errs = st.errors || [];
+  const when = `<b data-ago="${st.updated}">${ago(st.updated)}</b>`;
+  if (errs.length) chip(c, 'err', `Hourly job · last run ${when} had a problem`);
+  else if (Date.now() - st.updated > 3 * 36e5) chip(c, 'load', `Hourly job · last ran ${when}`);
+  else chip(c, 'live', `Hourly job · last ran ${when}`);
+  c.title = errs.length ? errs.join('\n') : 'Runs every hour on GitHub Actions, even when nobody has this page open.';
+}
+
+function dur(ms) {
+  const h = ms / 36e5;
+  if (h < 1) return Math.max(1, Math.round(ms / 6e4)) + 'm';
+  if (h < 48) return (h < 10 ? trim0(h.toFixed(1)) : Math.round(h)) + 'h';
+  return trim0((ms / DAY).toFixed(1)) + ' days';
+}
+const stamp = t => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const lv2 = n => (n >= 0 ? '+' : '') + n.toFixed(2);
+const rarity = tier => 'r-' + String(tier || 'COMMON').replace(/[^A-Z_]/g, '');
+function miniSpark(pts, color) {
+  const p = pts.filter(x => x[1] != null && isFinite(x[1]));
+  if (p.length < 2) return '';
+  const W = 240, H = 36, pad = 3;
+  let lo = Math.min(...p.map(x => x[1])), hi = Math.max(...p.map(x => x[1]));
+  if (hi === lo) { hi += 1; lo -= 1; }
+  const t0 = p[0][0], t1 = p[p.length - 1][0];
+  const pts2 = p.map(([t, v]) => `${(pad + (W - 2 * pad) * ((t - t0) / Math.max(1, t1 - t0))).toFixed(1)},${(pad + (H - 2 * pad) * (1 - (v - lo) / (hi - lo))).toFixed(1)}`).join(' ');
+  return `<svg class="mini" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts2}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+function rangeLine(pts, fmt) {
+  const p = pts.filter(x => x[1] != null && isFinite(x[1]));
+  if (p.length < 2) return '<span class="sub mini-note">A price line appears once the hourly job has a few hours of history.</span>';
+  const vals = p.map(x => x[1]);
+  return `<span class="sub mini-note">Last ${dur(p[p.length - 1][0] - p[0][0])}: ${fmt(Math.min(...vals))} to ${fmt(Math.max(...vals))}</span>`;
+}
+// last 7 days of saved hourly Golden Dragon numbers, plus the live value on the end
+function gdragSeries(col, live) {
+  const cutoff = Date.now() - WEEK;
+  const rows = (DATA.gdrag?.history || []).filter(r => r[0] >= cutoff).map(r => [r[0], r[col]]);
+  if (live != null && S.ah.snapshot && (!rows.length || S.ah.snapshot > rows[rows.length - 1][0])) rows.push([S.ah.snapshot, live]);
+  return rows;
+}
+// saved hourly bazaar points for the last 7 days, then whatever this page has fetched live since
+function bzSeries(id) {
+  const saved = (DATA.bazaar?.items?.[id] || []).filter(r => r[0] >= Date.now() - WEEK).map(r => ({ t: r[0], b: r[1], s: r[2] }));
+  const lastT = saved.length ? saved[saved.length - 1].t : 0;
+  return saved.concat((S.bz.hist[id] || []).filter(p => p.t > lastT));
+}
+
+function dailyGains(h) {
+  const sod = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const next = t => { const d = new Date(t); d.setDate(d.getDate() + 1); return d.getTime(); };
+  const out = [];
+  let i = 0, prev = h[0][1];
+  for (let ds = sod(h[0][0]), today = sod(Date.now()); ds <= today; ds = next(ds)) {
+    const de = next(ds);
+    let end = prev, seen = false;
+    while (i < h.length && h[i][0] < de) { end = h[i][1]; i++; seen = true; }
+    out.push({ day: ds, start: prev, end, seen });
+    prev = end;
+  }
+  return out;
+}
+function dailyChart(t) {
+  const days = dailyGains(t.history).slice(-14);
+  const max = Math.max(1, ...days.map(d => d.end - d.start));
+  const today = new Date().setHours(0, 0, 0, 0);
+  const best = days.reduce((b, d) => (d.end - d.start > (b ? b.end - b.start : 0) ? d : b), null);
+  const cols = days.map(d => {
+    const g = d.end - d.start, lv = petLevel(t.type, t.tier, d.end).exact - petLevel(t.type, t.tier, d.start).exact;
+    const label = new Date(d.day).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const isToday = d.day === today;
+    const tip = d.seen ? `${label}${isToday ? ' so far' : ''}: +${full(g)} XP, ${lv2(lv)} levels` : `${label}: no data that day`;
+    const bar = d.seen ? `<i class="bar-v${isToday ? ' today' : ''}" style="height:${Math.max(2, 100 * g / max).toFixed(1)}%"></i>` : '<i class="bar-v none"></i>';
+    return `<div class="bar-col" title="${esc(tip)}"><div class="bar-track">${bar}</div><span class="bar-d">${new Date(d.day).getDate()}</span></div>`;
+  }).join('');
+  return `<div class="daily">
+    <div class="daily-head"><span class="label">XP gained per day</span><span class="muted">${best ? `Best day +${short(best.end - best.start)} XP · ` : ''}hover a bar for details</span></div>
+    <div class="bars" style="grid-template-columns:repeat(${days.length},minmax(0,72px))">${cols}</div>
+  </div>`;
+}
+function petCard(id, t) {
+  const h = t.history, first = h[0], last = h[h.length - 1];
+  const L = petLevel(t.type, t.tier, last[1]);
+  const lvAt = exp => petLevel(t.type, t.tier, exp).exact;
+  const span = last[0] - first[0];
+  let base = null;
+  for (let k = h.length - 1; k >= 0; k--) if (h[k][0] <= last[0] - DAY) { base = h[k]; break; }
+  const ref = base || first;
+  const perDay = span >= 36e5 ? (last[1] - first[1]) / (span / DAY) : null;
+  const perDayLv = perDay != null ? (L.exact - lvAt(first[1])) / (span / DAY) : null;
+  const eta = perDay > 0 && L.xpToMax > 0 ? L.xpToMax / perDay * DAY : null;
+  let changed = null;
+  for (let k = h.length - 1; k > 0; k--) if (h[k][1] !== h[k - 1][1]) { changed = h[k][0]; break; }
+  const checked = DATA.pets.players?.[t.owner]?.checked || 0;
+  const missing = checked && t.lastSeen && t.lastSeen < checked;
+  const tiles = h.length < 2
+    ? `<div class="stat"><span class="label">Gains</span><span class="big">—</span><span class="sub">Needs a second hourly check to measure.</span></div>`
+    : `<div class="stat"><span class="label">${base ? 'Last 24 hours' : 'Since tracking started'}</span><span class="big ${tone(last[1] - ref[1])}">+${short(last[1] - ref[1])} XP</span><span class="sub">${lv2(L.exact - lvAt(ref[1]))} levels over ${dur(last[0] - ref[0])}</span></div>
+       <div class="stat"><span class="label">Average per day</span><span class="big">${perDay != null ? '+' + short(perDay) + ' XP' : '—'}</span><span class="sub">${perDay != null ? `${lv2(perDayLv)} levels a day over ${dur(span)}` : 'Needs at least an hour of history'}</span></div>`;
+  return `<article class="pet-card">
+    <header>
+      <div>
+        <h3><span class="pet-name ${rarity(t.tier)}">${esc(pretty(t.type))}</span><span class="lvl ${rarity(t.tier)}">Lvl ${L.level}</span><span class="exact">${L.exact.toFixed(2)}</span>${t.active ? '<span class="tag">Active</span>' : ''}${missing ? '<span class="tag auction">Not in pets menu at last check</span>' : ''}</h3>
+        <span class="muted">${esc(t.ownerName || '')}${t.profile ? ' · ' + esc(t.profile) + ' profile' : ''} · tracked since ${stamp(t.since || first[0])}${t.held ? ' · ' + esc(pretty(t.held)) : ''}${t.candy ? ' · ' + plural(t.candy, 'candy') : ''}</span>
+      </div>
+    </header>
+    <div class="pet-stats">
+      ${tiles}
+      <div class="stat"><span class="label">To Lvl ${L.max}</span><span class="big">${L.xpToMax > 0 ? short(L.xpToMax) + ' XP' : 'Max level'}</span><span class="sub">${L.xpToMax > 0 ? (eta ? `About ${dur(eta)} at the average rate` : `${(L.max - L.exact).toFixed(2)} levels to go`) : 'Nothing left to gain'}</span></div>
+    </div>
+    ${h.length >= 2 ? dailyChart(t) : ''}
+    <p class="note">${plural(h.length, 'saved point')} · XP now ${full(last[1])} · ${changed ? 'last XP gain seen ' + ago(changed) : 'no XP gained yet'}${checked ? ' · checked ' + ago(checked) : ''}</p>
+  </article>`;
+}
+function renderTracker() {
+  const box = $('#pt-tracked'), err = $('#pt-error');
+  const petErr = (DATA.status?.errors || []).filter(e => e.startsWith('pets:')).map(e => e.slice(6));
+  err.hidden = !petErr.length;
+  err.textContent = petErr.join(' ');
+  const names = Object.values(DATA.pets?.players || {}).map(p => p.name).filter(Boolean);
+  $('#pt-sub').textContent = names.length ? `Golden Dragons in ${names.join(', ')}’s pets menu · checked every hour` : 'Checked every hour by GitHub Actions';
+  if (!DATA.loaded) return;
+  if (!DATA.pets) {
+    box.innerHTML = '<div class="empty-card">No saved tracker data found. This fills in once the page is on GitHub Pages and the hourly job has run.</div>';
+    return;
+  }
+  const list = Object.entries(DATA.pets.pets || {}).filter(([, t]) => t.history?.length)
+    .sort(([, a], [, b]) => (b.type === 'GOLDEN_DRAGON') - (a.type === 'GOLDEN_DRAGON') || b.history[b.history.length - 1][1] - a.history[a.history.length - 1][1]);
+  box.innerHTML = list.length ? list.map(([id, t]) => petCard(id, t)).join('')
+    : '<div class="empty-card">The hourly job hasn’t recorded any pets yet. Check that <span class="mono">config.json</span> has the right username and that the pets are in the pets menu.</div>';
+}
+
+// ---------- events ----------
+document.addEventListener('click', async e => {
+  const c = e.target.closest('button[data-copy]');
+  if (c) {
+    const text = c.dataset.copy; let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch {
+      const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch {} ta.remove();
+    }
+    const old = c.textContent; c.textContent = ok ? 'Copied' : 'Copy failed';
+    setTimeout(() => { c.textContent = old; }, 1400);
+    return;
+  }
+  const s = e.target.closest('button[data-sort]');
+  if (s) {
+    const k = s.dataset.sort;
+    S.sort = S.sort.key === k ? { key: k, dir: -S.sort.dir } : { key: k, dir: k === 'price' || k === 'lvLeft' || k === 'end' ? 1 : -1 };
+    renderDragons();
+  }
+});
+// remember which dropdowns are open (this browser only)
+const OPEN_KEY = 'gdrag-flip-board:open';
+const readOpen = () => { try { return JSON.parse(localStorage.getItem(OPEN_KEY)) || {}; } catch { return {}; } };
+document.querySelectorAll('details.drop:not([data-nopersist])').forEach(d => {
+  const saved = readOpen();
+  if (d.id in saved) d.open = !!saved[d.id];
+  d.addEventListener('toggle', () => {
+    const cur = readOpen(); cur[d.id] = d.open;
+    try { localStorage.setItem(OPEN_KEY, JSON.stringify(cur)); } catch {}
+  });
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearTimeout(ahTimer); clearTimeout(bzTimer); }
+  else {
+    ahSchedule(0); bzSchedule(0);
+    if (Date.now() - DATA.loadedAt > 10 * 60e3) loadData();
+  }
+  renderStatus();
+});
+setInterval(() => { if (!document.hidden) loadData(); }, 10 * 60e3);   // pick up each hourly save
+setInterval(() => {
+  document.querySelectorAll('[data-ago]').forEach(el => { el.textContent = ago(+el.dataset.ago); });
+  document.querySelectorAll('[data-until]').forEach(el => { el.textContent = until(+el.dataset.until); });
+  document.querySelectorAll('[data-ends]').forEach(el => { el.textContent = endsIn(+el.dataset.ends); });
+}, 1000);
+
+// ---------- start ----------
+renderBazaar();
+renderDragons();
+$('#scan').hidden = false;
+loadData();
+bzTick();
+ahTick();
+})();
+</script>
+</body>
+</html>
