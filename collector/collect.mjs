@@ -92,7 +92,8 @@ async function resolvePlayer(entry, known) {
     const j = await getJSON(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(isUuid ? plain : raw)}`,
       { 'User-Agent': 'gdrag-flip-board (GitHub Actions)' }, 2);
     const p = j?.data?.player;
-    if (p?.raw_id) return { uuid: p.raw_id.toLowerCase(), name: p.username };
+    // skin_texture is the player's skin on Mojang's texture server, used for the heads on the MP Leaderboard
+    if (p?.raw_id) return { uuid: p.raw_id.toLowerCase(), name: p.username, skin: p.skin_texture ? String(p.skin_texture).replace(/^http:/, 'https:') : null };
   } catch { /* fall back to what we already know */ }
   if (isUuid) return { uuid: plain, name: known[plain]?.name || raw };
   const hit = Object.entries(known).find(([, v]) => v.name?.toLowerCase() === raw.toLowerCase());
@@ -186,6 +187,7 @@ async function collectMp(config, log) {
       if (!order.includes(who.uuid)) order.push(who.uuid);
       const pl = (store.players[who.uuid] ||= { history: [] });
       pl.name = who.name;
+      if (who.skin) pl.skin = who.skin;
       if (NOW - (pl.checked || 0) < PLAYER_GAP) continue;
       const r = readMp(await getProfiles(who.uuid), who.uuid);
       pl.checked = NOW;
