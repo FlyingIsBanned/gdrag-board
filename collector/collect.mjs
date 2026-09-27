@@ -100,11 +100,14 @@ async function collectPets(config, log) {
   if (!KEY) { log.errors.push('pets: The HYPIXEL_API_KEY repository secret isn\'t set, so pets weren\'t checked.'); return store; }
   const types = new Set(config.petTypes || ['GOLDEN_DRAGON']);
   const extra = new Set((config.petUuids || []).map(String));
+  const order = [];   // uuids of the configured players, in config order, so the page can show each account separately
+  let resolvedAll = true;
 
   for (const entry of players) {
     let who;
     try {
       who = await resolvePlayer(entry, store.players);
+      if (!order.includes(who.uuid)) order.push(who.uuid);
       const pl = (store.players[who.uuid] ||= {});
       pl.name = who.name;
       if (NOW - (pl.checked || 0) < PLAYER_GAP) { log.notes.push(`pets: ${who.name} was checked under an hour ago, skipped.`); continue; }
@@ -117,6 +120,8 @@ async function collectPets(config, log) {
           const id = p?.uuid || p?.uniqueId;
           if (!id || !p.type || !(types.has(p.type) || extra.has(id))) continue;
           const exp = Number(p.exp) || 0;
+          // Lvl 200 Golden Dragons can't gain any more, so they aren't tracked
+          if (p.type === 'GOLDEN_DRAGON' && exp >= XP_200) { delete store.pets[id]; continue; }
           const t = (store.pets[id] ||= { owner: who.uuid, since: NOW, history: [] });
           Object.assign(t, {
             owner: who.uuid, ownerName: who.name, profile: prof.cute_name || '', type: p.type, tier: p.tier,
@@ -129,10 +134,21 @@ async function collectPets(config, log) {
       }
       log.notes.push(`pets: ${who.name}, ${n} tracked pet${n === 1 ? '' : 's'} found.`);
     } catch (e) {
+      if (!who) resolvedAll = false;
       log.errors.push(`pets: ${who ? who.name + ': ' : ''}${e.message}`);
       if (e.fatal) break;   // a bad key fails for every player, no point asking again
     }
   }
+  // Drop players (and their pets) that were removed from config.json, but only when every
+  // configured name was found, so a failed lookup doesn't wipe someone's history.
+  if (resolvedAll) {
+    for (const uuid of Object.keys(store.players)) if (!order.includes(uuid)) delete store.players[uuid];
+    for (const [id, t] of Object.entries(store.pets)) if (!order.includes(t.owner)) delete store.pets[id];
+  }
+  for (const [id, t] of Object.entries(store.pets)) {
+    if (t.type === 'GOLDEN_DRAGON' && (t.history.at(-1)?.[1] ?? 0) >= XP_200) delete store.pets[id];
+  }
+  store.order = [...order, ...(store.order || []).filter(u => !order.includes(u) && store.players[u])];
   store.updated = NOW;
   return store;
 }
