@@ -185,6 +185,9 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .stat{background:var(--surface-2); border-radius:10px; padding:12px 14px; display:grid; gap:2px; align-content:start}
 .stat .big{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:22px; font-weight:500}
 .stat .sub{font-size:12px; color:var(--ink-2)}
+.npc{display:grid; gap:10px; margin-top:16px}
+.npc h3{font-size:17px}
+.npc-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr)); gap:10px}
 .daily{display:grid; gap:8px}
 .daily-head{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline; justify-content:space-between}
 .bars{display:grid; gap:6px; height:120px}
@@ -273,6 +276,11 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
         </div>
       </details>
     </div>
+
+    <div class="npc" aria-labelledby="npc-h">
+      <h3 id="npc-h">NPC profit</h3>
+      <div class="npc-stats" id="npc"></div>
+    </div>
   </section>
 
   <section class="panel" id="bazaar" aria-labelledby="bz-h">
@@ -297,6 +305,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <p><b>Levels to go</b> uses each pet's exact XP. From level 100 to 200 every level costs the same 1,886,700 pet XP, so a Lvl 137 that is partway to 138 needs fewer than 63 levels.</p>
     <p><b>Profit</b> is the cheapest Lvl 200 BIN (no candies, no skin) minus the dragon's price. Auction house fees are not taken off. <b>Profit / level</b> is profit divided by levels to go.</p>
     <p>Only BIN listings are ranked in the top 5. Regular auctions are tagged <b>Auction</b> in the full list and show their current bid, which can still go up. <b>New</b> marks a listing that appeared in the last 15 minutes. Use <b>Copy</b> to get a <span class="mono">/viewauction</span> command you can paste in game.</p>
+    <p><b>NPC profit:</b> the NPC price is 50 Enchanted Gold Blocks and one each of Perfect Amethyst, Jade, Sapphire, Amber and Topaz Gemstones at bazaar instant-buy prices, plus 500M coins. Profit is the cheapest clean Lvl 200 BIN minus that. The dragon starts at 0 XP, so profit / level uses the same 1,886,700-XP levels as the table: 214M XP to Lvl 200 counts as about 113.4 levels.</p>
     <p><b>Bazaar:</b> the buy order is the highest price someone is bidding, which is what you get if you instant-sell. The sell order is the lowest price someone is asking, which is what you pay if you instant-buy.</p>
     <p><b>Pet XP tracker:</b> a GitHub Actions job runs every hour, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there below Lvl 200, showing each player separately. Following Hypixel's API rules, each player is checked at most once an hour. The same job saves hourly bazaar prices and Golden Dragon prices for the 7-day lines.</p>
     <p>Updates: the auction house API refreshes once a minute and the bazaar about every 20 seconds. The page checks right after each refresh, re-scans every auction every 5 minutes, and pauses while the tab is hidden.</p>
@@ -319,13 +328,23 @@ const BZ_ITEMS = [
   { id: 'ESSENCE_CRIMSON', name: 'Crimson Essence', kind: 'Essence' },
   { id: 'ENCHANTMENT_ULTIMATE_CHIMERA_1', name: 'Chimera I', kind: 'Ultimate enchanted book' },
 ];
+// Buying a Golden Dragon from the NPC: these bazaar items plus 500M coins. It starts at 0 XP.
+const NPC_COINS = 500e6;
+const NPC_ITEMS = [
+  { id: 'ENCHANTED_GOLD_BLOCK', name: 'Enchanted Gold Block', qty: 50 },
+  { id: 'PERFECT_AMETHYST_GEM', name: 'Perfect Amethyst Gemstone', qty: 1 },
+  { id: 'PERFECT_JADE_GEM', name: 'Perfect Jade Gemstone', qty: 1 },
+  { id: 'PERFECT_SAPPHIRE_GEM', name: 'Perfect Sapphire Gemstone', qty: 1 },
+  { id: 'PERFECT_AMBER_GEM', name: 'Perfect Amber Gemstone', qty: 1 },
+  { id: 'PERFECT_TOPAZ_GEM', name: 'Perfect Topaz Gemstone', qty: 1 },
+];
 
 // ---------- state ----------
 const S = {
   dragons: new Map(),
   seen: new Map(),                   // uuid -> first time seen (0 = was there when the page opened)
   ah: { snapshot: 0, fullAt: 0, syncAt: 0, nextAt: 0, status: 'load', error: '', scanning: false, page: 0, total: 0, busy: false, baseline: false },
-  bz: { snapshot: 0, nextAt: 0, status: 'load', error: '', items: {}, hist: {}, change: {}, busy: false },
+  bz: { snapshot: 0, nextAt: 0, status: 'load', error: '', items: {}, hist: {}, change: {}, npc: null, busy: false },
   sort: { key: 'exp', dir: -1 },
 };
 
@@ -559,7 +578,14 @@ async function bzTick() {
         h.push({ t: j.lastUpdated, b: row.buyOrder, s: row.sellOrder });
         if (h.length > 180) h.shift();
       }
+      // NPC recipe cost at instant-buy prices (lowest sell offer, falling back to the highest buy order)
+      S.bz.npc = {};
+      for (const it of NPC_ITEMS) {
+        const p = j.products?.[it.id];
+        S.bz.npc[it.id] = p ? (p.buy_summary?.[0]?.pricePerUnit ?? p.sell_summary?.[0]?.pricePerUnit ?? null) : null;
+      }
       renderBazaar();
+      renderNpc();
       next = clamp(j.lastUpdated + BZ_STEP + 2000 - Date.now(), 3000, BZ_STEP);
     } else next = 4000;
     S.bz.status = 'live'; S.bz.error = '';
@@ -620,7 +646,32 @@ function dragonCell(d) {
     `<span class="bar" title="${pct.toFixed(1)}% of the way from 100 to 200"><i style="width:${pct.toFixed(1)}%"></i></span></div>`;
 }
 
+// cheapest clean Lvl 200 BIN, the same reference the profit columns use
+function cheapest200() {
+  let best = null;
+  for (const d of S.dragons.values()) if (d.candy === 0 && !d.skin && d.level >= 200 && d.bin && (!best || d.price < best.price)) best = d;
+  return best ? best.price : null;
+}
+function renderNpc() {
+  const box = $('#npc');
+  const prices = S.bz.npc;
+  const missing = prices ? NPC_ITEMS.filter(it => prices[it.id] == null) : NPC_ITEMS;
+  const cost = prices && !missing.length ? NPC_COINS + NPC_ITEMS.reduce((t, it) => t + it.qty * prices[it.id], 0) : null;
+  const ref = S.ah.snapshot ? cheapest200() : null;
+  const m = cost != null ? metrics({ exp: 0, price: cost }, ref) : null;
+  const recipe = NPC_ITEMS.map(it => `${it.qty}× ${it.name}${prices?.[it.id] != null ? ' @ ' + full(prices[it.id]) : ''}`).join('\n') + `\n+ ${full(NPC_COINS)} coins`;
+  const stat = (label, big, cls, title, sub) => `<div class="stat"${title ? ` title="${esc(title)}"` : ''}><span class="label">${label}</span><span class="big ${cls}">${big}</span><span class="sub">${sub}</span></div>`;
+  box.innerHTML =
+    stat('NPC price', cost != null ? short(cost) : '—', '', recipe,
+      cost != null ? 'Bazaar instant-buy + 500M coins' : prices ? `No bazaar price for ${missing.map(it => it.name).join(', ')}` : 'Waiting for bazaar prices') +
+    stat('Total profit', m?.profit != null ? signed(m.profit) : '—', tone(m?.profit), m?.profit != null ? full(m.profit) : '',
+      ref != null ? `vs cheapest Lvl 200 at ${short(ref)}` : S.ah.snapshot ? 'No clean Lvl 200 BIN listed' : 'Scanning the auction house…') +
+    stat('Profit / level', m?.ppl != null ? signed(m.ppl) : '—', tone(m?.ppl), '',
+      m ? `Over ${m.lvLeft.toFixed(1)} levels from 0 XP` : '—');
+}
+
 function renderDragons() {
+  renderNpc();
   if (!S.ah.snapshot) {
     const wait = n => `<tr><td class="empty" colspan="${n}">Waiting for the first auction house scan.</td></tr>`;
     $('#tiles').innerHTML = ['Cheapest Lvl 200', 'Best profit per level', 'Lvl 100–199 listed']
