@@ -49,7 +49,7 @@ Your board is now at **`https://<your-github-username>.github.io/gdrag-board/`**
 
 Edit `config.json` on GitHub. The site updates within a couple of minutes.
 
-- `players`: whose pets menu to check. Put each name in its own quotes, for example `["FlyingIsBanned", "icey_vibes"]`, not `["FlyingIsBanned, icey_vibes"]`. Each player is tracked and shown separately and costs one API request per check.
+- `players`: whose pets menu to check. Put each name in its own quotes, for example `["FlyingIsntBanned", "icey_vibes"]`, not `["FlyingIsntBanned, icey_vibes"]`. Each player is tracked and shown separately and costs one API request per check.
 - `petTypes`: which pet types to track, for example `"GOLDEN_DRAGON"` or `"ENDER_DRAGON"`.
 - `petUuids`: specific pets to track regardless of type.
 - `bazaar`: the bazaar items to show and record. Each needs its bazaar `id`, for example `ESSENCE_WITHER`.
