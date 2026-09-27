@@ -4,7 +4,7 @@ A live Hypixel SkyBlock board, hosted free on GitHub Pages. It shows:
 
 - **Golden Dragons worth levelling:** the cheapest clean Lvl 200, the top 5 by profit per level, and every Lvl 100–199 listing.
 - **Bazaar prices:** buy order and sell order for the items in `config.json`.
-- **Pet XP tracker:** XP and levels gained per day by the Golden Dragons in your pets menu.
+- **Pet XP tracker:** XP and levels gained per day by the Golden Dragons in your pets menu, per player. Lvl 200 Golden Dragons are skipped since they can't gain more.
 
 Prices update live while someone has the page open. A GitHub Actions job runs **every hour, even when nobody has it open**, and saves:
 
@@ -49,7 +49,7 @@ Your board is now at **`https://<your-github-username>.github.io/gdrag-board/`**
 
 Edit `config.json` on GitHub. The site updates within a couple of minutes.
 
-- `players`: whose pets menu to check. Each player costs one API request an hour.
+- `players`: whose pets menu to check. Put each name in its own quotes, for example `["FlyingIsntBanned", "icey_vibes"]`, not `["FlyingIsntBanned, icey_vibes"]`. Each player is tracked and shown separately and costs one API request per check.
 - `petTypes`: which pet types to track, for example `"GOLDEN_DRAGON"` or `"ENDER_DRAGON"`.
 - `petUuids`: specific pets to track regardless of type.
 - `bazaar`: the bazaar items to show and record. Each needs its bazaar `id`, for example `ESSENCE_WITHER`.

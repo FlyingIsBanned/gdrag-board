@@ -173,8 +173,10 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .pet-name{font-family:var(--display); font-weight:600}
 .r-COMMON{color:var(--r-common)} .r-UNCOMMON{color:var(--r-uncommon)} .r-RARE{color:var(--r-rare)}
 .r-EPIC{color:var(--r-epic)} .r-LEGENDARY{color:var(--r-legendary)} .r-MYTHIC{color:var(--r-mythic)}
-.tracked{display:grid; gap:12px}
+.tracked{display:grid; gap:24px}
 .empty-card{border:1px dashed var(--line); border-radius:12px; padding:18px; color:var(--ink-2); font-size:14px}
+.owner-group{display:grid; gap:12px}
+.owner-name{display:flex; gap:10px; align-items:baseline; font-size:17px}
 .pet-card{border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:14px}
 .pet-card header{display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 16px; align-items:flex-start}
 .pet-card header > div{display:grid; gap:3px}
@@ -296,7 +298,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <p><b>Profit</b> is the cheapest Lvl 200 BIN (no candies, no skin) minus the dragon's price. Auction house fees are not taken off. <b>Profit / level</b> is profit divided by levels to go.</p>
     <p>Only BIN listings are ranked in the top 5. Regular auctions are tagged <b>Auction</b> in the full list and show their current bid, which can still go up. <b>New</b> marks a listing that appeared in the last 15 minutes. Use <b>Copy</b> to get a <span class="mono">/viewauction</span> command you can paste in game.</p>
     <p><b>Bazaar:</b> the buy order is the highest price someone is bidding, which is what you get if you instant-sell. The sell order is the lowest price someone is asking, which is what you pay if you instant-buy.</p>
-    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every hour, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there. Following Hypixel's API rules, each player is checked at most once an hour. The same job saves hourly bazaar prices and Golden Dragon prices for the 7-day lines.</p>
+    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every hour, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there below Lvl 200, showing each player separately. Following Hypixel's API rules, each player is checked at most once an hour. The same job saves hourly bazaar prices and Golden Dragon prices for the 7-day lines.</p>
     <p>Updates: the auction house API refreshes once a minute and the bazaar about every 20 seconds. The page checks right after each refresh, re-scans every auction every 5 minutes, and pauses while the tab is hidden.</p>
   </footer>
 </div>
@@ -918,17 +920,34 @@ function renderTracker() {
   const petErr = (DATA.status?.errors || []).filter(e => e.startsWith('pets:')).map(e => e.slice(6));
   err.hidden = !petErr.length;
   err.textContent = petErr.join(' ');
-  const names = Object.values(DATA.pets?.players || {}).map(p => p.name).filter(Boolean);
-  $('#pt-sub').textContent = names.length ? `Golden Dragons in ${names.join(', ')}’s pets menu · checked every hour` : 'Checked every hour by GitHub Actions';
+  const players = DATA.pets?.players || {};
+  const order = [...(DATA.pets?.order || []).filter(u => players[u]), ...Object.keys(players).filter(u => !(DATA.pets?.order || []).includes(u))];
+  const names = order.map(u => players[u].name).filter(Boolean);
+  $('#pt-sub').textContent = names.length ? `Golden Dragons below Lvl 200 · ${names.join(' and ')} · checked every hour` : 'Checked every hour by GitHub Actions';
   if (!DATA.loaded) return;
   if (!DATA.pets) {
     box.innerHTML = '<div class="empty-card">No saved tracker data found. This fills in once the page is on GitHub Pages and the hourly job has run.</div>';
     return;
   }
+  // Lvl 200 Golden Dragons can't gain XP, so they're left out
   const list = Object.entries(DATA.pets.pets || {}).filter(([, t]) => t.history?.length)
+    .filter(([, t]) => !(t.type === 'GOLDEN_DRAGON' && t.history[t.history.length - 1][1] >= XP_200))
     .sort(([, a], [, b]) => (b.type === 'GOLDEN_DRAGON') - (a.type === 'GOLDEN_DRAGON') || b.history[b.history.length - 1][1] - a.history[a.history.length - 1][1]);
-  box.innerHTML = list.length ? list.map(([id, t]) => petCard(id, t)).join('')
-    : '<div class="empty-card">The hourly job hasn’t recorded any pets yet. Check that <span class="mono">config.json</span> has the right username and that the pets are in the pets menu.</div>';
+  if (!order.length && !list.length) {
+    box.innerHTML = '<div class="empty-card">The hourly job hasn’t recorded any pets yet. Check that <span class="mono">config.json</span> has the right username and that the pets are in the pets menu.</div>';
+    return;
+  }
+  // One group per account, so each player's pets are tracked and shown separately
+  const owners = [...order, ...new Set(list.map(([, t]) => t.owner).filter(u => !order.includes(u)))];
+  box.innerHTML = owners.map(u => {
+    const mine = list.filter(([, t]) => t.owner === u);
+    const name = players[u]?.name || mine[0]?.[1].ownerName || 'Unknown player';
+    return `<section class="owner-group" aria-label="${esc(name)}">
+      <h3 class="owner-name">${esc(name)} <span class="muted">${plural(mine.length, 'pet')}</span></h3>
+      ${mine.length ? mine.map(([id, t]) => petCard(id, t)).join('')
+        : `<div class="empty-card">No Golden Dragons below Lvl 200 found in ${esc(name)}’s pets menu${players[u]?.checked ? '' : ' yet'}.</div>`}
+    </section>`;
+  }).join('');
 }
 
 // ---------- events ----------
