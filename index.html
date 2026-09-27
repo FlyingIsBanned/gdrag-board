@@ -155,7 +155,11 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .mp-row{position:relative; display:grid; grid-template-columns:44px 48px minmax(0,1fr) auto; grid-template-areas:"rank head who score" "bar bar bar bar";
   gap:10px 14px; align-items:center; padding:14px 16px 12px; border:1px solid var(--line); border-radius:12px; background:var(--surface)}
 .mp-rank{grid-area:rank; font-family:var(--display); font-weight:700; font-size:22px; color:var(--ink-3); text-align:center}
-.mp-head{grid-area:head; width:48px; height:48px; border-radius:8px; background:var(--surface-2); image-rendering:pixelated}
+.mp-head{--px:6px; grid-area:head; width:calc(8 * var(--px)); height:calc(8 * var(--px)); border-radius:8px; background-color:var(--surface-2); overflow:hidden;
+  display:grid; place-items:center; font-family:var(--display); font-weight:700; font-size:20px; color:var(--ink-3)}
+/* face (8,8) with the hat layer (40,8) on top, cut straight out of the 64px skin file */
+.mp-head.skin{background-image:var(--skin), var(--skin); background-repeat:no-repeat; background-size:calc(64 * var(--px)) auto;
+  background-position:calc(-40 * var(--px)) calc(-8 * var(--px)), calc(-8 * var(--px)) calc(-8 * var(--px)); image-rendering:pixelated; font-size:0}
 .mp-who{grid-area:who; display:grid; gap:2px; min-width:0}
 .mp-name{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; font-family:var(--display); font-weight:700; font-size:18px; overflow-wrap:anywhere}
 .mp-badge{font-family:var(--body); font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--surface-2); color:var(--ink-2); white-space:nowrap}
@@ -168,7 +172,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .mp-row.king{border:2px solid var(--gold); padding:18px 18px 14px; background:linear-gradient(120deg, var(--gold-soft), var(--surface) 70%);
   box-shadow:0 6px 24px -12px color-mix(in srgb, var(--gold) 70%, transparent)}
 .mp-row.king .mp-rank{color:var(--gold); font-size:30px}
-.mp-row.king .mp-head{width:56px; height:56px; box-shadow:0 0 0 2px var(--gold)}
+.mp-row.king .mp-head{--px:7px; box-shadow:0 0 0 2px var(--gold)}
 .mp-row.king .mp-name{font-size:22px}
 .mp-row.king .mp-score .big{font-size:34px; color:var(--gold)}
 .mp-row.king .mp-badge{background:var(--gold); color:var(--surface)}
@@ -242,8 +246,8 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 }
 @media (max-width:760px){ .opt{display:none} }
 @media (max-width:560px){
-  .mp-row,.mp-row.king{grid-template-columns:24px 36px minmax(0,1fr); grid-template-areas:"rank head who" "score score score" "bar bar bar"; gap:8px 10px; padding-inline:14px}
-  .mp-head,.mp-row.king .mp-head{width:36px; height:36px}
+  .mp-row,.mp-row.king{grid-template-columns:24px 40px minmax(0,1fr); grid-template-areas:"rank head who" "score score score" "bar bar bar"; gap:8px 10px; padding-inline:14px}
+  .mp-head,.mp-row.king .mp-head{--px:5px}
   .mp-rank,.mp-row.king .mp-rank{font-size:22px}
   .mp-name{font-size:17px}
   .mp-row.king .mp-name{font-size:19px}
@@ -1093,6 +1097,12 @@ function weekChange(hist, mp) {
   for (const h of hist) if (h[0] <= Date.now() - WEEK) base = h;
   return hist[hist.length - 1][0] - base[0] > 0 ? mp - base[1] : null;
 }
+// the skin URL comes from Mojang's texture server via the background job; without one, show their initial
+function head(r) {
+  const ok = typeof r.skin === 'string' && /^https:\/\/textures\.minecraft\.net\/texture\/[0-9a-f]+$/.test(r.skin);
+  return ok ? `<span class="mp-head skin" style="--skin:url('${r.skin}')" aria-hidden="true"></span>`
+    : `<span class="mp-head" aria-hidden="true">${esc((r.name || '?')[0].toUpperCase())}</span>`;
+}
 function renderMp() {
   const box = $('#mp-board'), err = $('#mp-error');
   const mpErr = (DATA.status?.errors || []).filter(e => e.startsWith('mp:')).map(e => e.slice(4));
@@ -1128,7 +1138,7 @@ function renderMp() {
     return `<li class="mp-row${king ? ' king' : ''}${loser ? ' loser' : ''}${r.mp ? '' : ' none'}">
       ${king ? '<span class="mp-crown" aria-hidden="true">👑</span>' : ''}
       <span class="mp-rank" aria-label="${rank ? 'Rank ' + rank : 'Unranked'}">${rank ?? '–'}</span>
-      <img class="mp-head" src="https://mc-heads.net/avatar/${esc(r.uuid)}/64" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      ${head(r)}
       <div class="mp-who">
         <span class="mp-name">${esc(r.name || 'Unknown player')}${badge}</span>
         ${meta ? `<span class="muted">${meta}</span>` : ''}
