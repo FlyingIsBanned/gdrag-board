@@ -1,10 +1,10 @@
-// Hourly SkyBlock data collector for the GDrag Flip Board.
-// GitHub Actions runs this every hour (Node 20+, no dependencies). It writes small JSON files
+// SkyBlock data collector for the GDrag Flip Board.
+// GitHub Actions runs this every 15 minutes (Node 20+, no dependencies). It writes small JSON files
 // into data/, which the web page reads, so history keeps building while nobody has the page open.
 //
 //   data/pets.json    XP snapshots for tracked pets (needs the HYPIXEL_API_KEY secret)
-//   data/bazaar.json  hourly buy order / sell order for the items in config.json
-//   data/gdrag.json   hourly cheapest clean Lvl 200 Golden Dragon and best profit per level
+//   data/bazaar.json  buy order / sell order for the items in config.json
+//   data/gdrag.json   cheapest clean Lvl 200 Golden Dragon and best profit per level
 //   data/status.json  when the job last ran and anything that went wrong
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';

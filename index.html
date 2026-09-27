@@ -222,12 +222,12 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <div class="title">
       <p class="eyebrow">Hypixel SkyBlock · live public API</p>
       <h1>GDrag Flip Board</h1>
-      <p class="lede">Golden Dragons worth levelling to 200, bazaar prices for Derelict Ashe, Crimson Essence and Chimera I, and a pet XP tracker. Prices update live while you watch, and an hourly job keeps saving history when nobody has it open.</p>
+      <p class="lede">Golden Dragons worth levelling to 200, bazaar prices for Derelict Ashe, Crimson Essence and Chimera I, and a pet XP tracker. Prices update live while you watch, and a background job keeps saving history every 15 minutes when nobody has it open.</p>
     </div>
     <div class="status" aria-live="polite">
       <span class="chip" id="ah-chip"><i class="dot load"></i><span>Auction house · starting</span></span>
       <span class="chip" id="bz-chip"><i class="dot load"></i><span>Bazaar · starting</span></span>
-      <span class="chip" id="col-chip"><i class="dot load"></i><span>Hourly job · loading</span></span>
+      <span class="chip" id="col-chip"><i class="dot load"></i><span>Background job · loading</span></span>
     </div>
   </header>
 
@@ -294,7 +294,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
   <section class="panel" id="tracker" aria-labelledby="pt-h">
     <div class="section-head">
       <h2 id="pt-h">Pet XP tracker</h2>
-      <span class="muted" id="pt-sub">Checked every hour by GitHub Actions</span>
+      <span class="muted" id="pt-sub">Checked every 15 minutes by GitHub Actions</span>
     </div>
     <p class="error" id="pt-error" role="alert" hidden></p>
     <div class="tracked" id="pt-tracked"><div class="empty-card">Loading saved tracker data…</div></div>
@@ -307,7 +307,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <p>Only BIN listings are ranked in the top 5. Regular auctions are tagged <b>Auction</b> in the full list and show their current bid, which can still go up. <b>New</b> marks a listing that appeared in the last 15 minutes. Use <b>Copy</b> to get a <span class="mono">/viewauction</span> command you can paste in game.</p>
     <p><b>NPC profit:</b> the NPC price is 50 Enchanted Gold Blocks and one each of Perfect Amethyst, Jade, Sapphire, Amber and Topaz Gemstones at bazaar instant-buy prices, plus 500M coins. Profit is the cheapest clean Lvl 200 BIN minus that. The dragon starts at 0 XP, so profit / level uses the same 1,886,700-XP levels as the table: 214M XP to Lvl 200 counts as about 113.4 levels.</p>
     <p><b>Bazaar:</b> the buy order is the highest price someone is bidding, which is what you get if you instant-sell. The sell order is the lowest price someone is asking, which is what you pay if you instant-buy.</p>
-    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every hour, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there below Lvl 200, showing each player separately. Following Hypixel's API rules, each player is checked at most once an hour. The same job saves hourly bazaar prices and Golden Dragon prices for the 7-day lines.</p>
+    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every 15 minutes, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there below Lvl 200, showing each player separately. Each player is checked at most once per run. The same job saves bazaar prices and Golden Dragon prices for the 7-day lines.</p>
     <p>Updates: the auction house API refreshes once a minute and the bazaar about every 20 seconds. The page checks right after each refresh, re-scans every auction every 5 minutes, and pauses while the tab is hidden.</p>
   </footer>
 </div>
@@ -770,7 +770,7 @@ function renderDragons() {
 
 function spark(h) {
   const pts = h.filter(p => p.b != null && p.s != null);
-  if (pts.length < 2) return `<p class="note">A price line appears once the hourly job has saved some history.</p>`;
+  if (pts.length < 2) return `<p class="note">A price line appears once the background job has saved some history.</p>`;
   const W = 300, H = 56, pad = 4;
   const vals = pts.flatMap(p => [p.b, p.s]);
   let lo = Math.min(...vals), hi = Math.max(...vals);
@@ -815,7 +815,7 @@ function renderBazaar() {
   }).join('');
 }
 
-// ---------- saved history (written every hour by the GitHub Actions job) ----------
+// ---------- saved history (written every 15 minutes by the GitHub Actions job) ----------
 // Standard pet XP table (XP needed for each next level); rarity picks the starting offset.
 const PET_LEVELS = [100,110,120,130,145,160,175,190,210,230,250,275,300,330,360,400,440,490,540,600,660,730,800,880,960,1050,1150,1260,1380,1510,1650,1800,1960,2130,2310,2500,2700,2920,3160,3420,3700,4000,4350,4750,5200,5700,6300,7000,7800,8700,9700,10800,12000,13300,14700,16200,17800,19500,21300,23200,25200,27400,29800,32400,35200,38200,41400,44800,48400,52200,56200,60400,64800,69400,74200,79200,84700,90700,97200,104200,111700,119700,128200,137200,146700,156700,167700,179700,192700,206700,221700,237700,254700,272700,291700,311700,333700,357700,383700,411700,441700,476700,516700,561700,611700,666700,726700,791700,861700,936700,1016700,1101700,1191700,1286700,1386700,1496700,1616700,1746700,1886700];
 const RARITY_OFFSET = { COMMON: 0, UNCOMMON: 6, RARE: 11, EPIC: 16, LEGENDARY: 20, MYTHIC: 20 };
@@ -852,13 +852,13 @@ async function loadData() {
 }
 function renderCollector() {
   const c = $('#col-chip'), st = DATA.status;
-  if (!st) { chip(c, 'paused', 'Hourly job · no saved data yet'); c.title = 'The hourly GitHub job hasn’t saved anything yet.'; return; }
+  if (!st) { chip(c, 'paused', 'Background job · no saved data yet'); c.title = 'The background GitHub job hasn’t saved anything yet.'; return; }
   const errs = st.errors || [];
   const when = `<b data-ago="${st.updated}">${ago(st.updated)}</b>`;
-  if (errs.length) chip(c, 'err', `Hourly job · last run ${when} had a problem`);
-  else if (Date.now() - st.updated > 3 * 36e5) chip(c, 'load', `Hourly job · last ran ${when}`);
-  else chip(c, 'live', `Hourly job · last ran ${when}`);
-  c.title = errs.length ? errs.join('\n') : 'Runs every hour on GitHub Actions, even when nobody has this page open.';
+  if (errs.length) chip(c, 'err', `Background job · last run ${when} had a problem`);
+  else if (Date.now() - st.updated > 36e5) chip(c, 'load', `Background job · last ran ${when}`);
+  else chip(c, 'live', `Background job · last ran ${when}`);
+  c.title = errs.length ? errs.join('\n') : 'Runs every 15 minutes on GitHub Actions, even when nobody has this page open.';
 }
 
 function dur(ms) {
@@ -882,18 +882,18 @@ function miniSpark(pts, color) {
 }
 function rangeLine(pts, fmt) {
   const p = pts.filter(x => x[1] != null && isFinite(x[1]));
-  if (p.length < 2) return '<span class="sub mini-note">A price line appears once the hourly job has a few hours of history.</span>';
+  if (p.length < 2) return '<span class="sub mini-note">A price line appears once the background job has a few hours of history.</span>';
   const vals = p.map(x => x[1]);
   return `<span class="sub mini-note">Last ${dur(p[p.length - 1][0] - p[0][0])}: ${fmt(Math.min(...vals))} to ${fmt(Math.max(...vals))}</span>`;
 }
-// last 7 days of saved hourly Golden Dragon numbers, plus the live value on the end
+// last 7 days of saved Golden Dragon numbers, plus the live value on the end
 function gdragSeries(col, live) {
   const cutoff = Date.now() - WEEK;
   const rows = (DATA.gdrag?.history || []).filter(r => r[0] >= cutoff).map(r => [r[0], r[col]]);
   if (live != null && S.ah.snapshot && (!rows.length || S.ah.snapshot > rows[rows.length - 1][0])) rows.push([S.ah.snapshot, live]);
   return rows;
 }
-// saved hourly bazaar points for the last 7 days, then whatever this page has fetched live since
+// saved bazaar points for the last 7 days, then whatever this page has fetched live since
 function bzSeries(id) {
   const saved = (DATA.bazaar?.items?.[id] || []).filter(r => r[0] >= Date.now() - WEEK).map(r => ({ t: r[0], b: r[1], s: r[2] }));
   const lastT = saved.length ? saved[saved.length - 1].t : 0;
@@ -948,7 +948,7 @@ function petCard(id, t) {
   const checked = DATA.pets.players?.[t.owner]?.checked || 0;
   const missing = checked && t.lastSeen && t.lastSeen < checked;
   const tiles = h.length < 2
-    ? `<div class="stat"><span class="label">Gains</span><span class="big">—</span><span class="sub">Needs a second hourly check to measure.</span></div>`
+    ? `<div class="stat"><span class="label">Gains</span><span class="big">—</span><span class="sub">Needs a second check to measure.</span></div>`
     : `<div class="stat"><span class="label">${base ? 'Last 24 hours' : 'Since tracking started'}</span><span class="big ${tone(last[1] - ref[1])}">+${short(last[1] - ref[1])} XP</span><span class="sub">${lv2(L.exact - lvAt(ref[1]))} levels over ${dur(last[0] - ref[0])}</span></div>
        <div class="stat"><span class="label">Average per day</span><span class="big">${perDay != null ? '+' + short(perDay) + ' XP' : '—'}</span><span class="sub">${perDay != null ? `${lv2(perDayLv)} levels a day over ${dur(span)}` : 'Needs at least an hour of history'}</span></div>`;
   return `<article class="pet-card">
@@ -974,10 +974,10 @@ function renderTracker() {
   const players = DATA.pets?.players || {};
   const order = [...(DATA.pets?.order || []).filter(u => players[u]), ...Object.keys(players).filter(u => !(DATA.pets?.order || []).includes(u))];
   const names = order.map(u => players[u].name).filter(Boolean);
-  $('#pt-sub').textContent = names.length ? `Golden Dragons below Lvl 200 · ${names.join(' and ')} · checked every hour` : 'Checked every hour by GitHub Actions';
+  $('#pt-sub').textContent = names.length ? `Golden Dragons below Lvl 200 · ${names.join(' and ')} · checked every 15 minutes` : 'Checked every 15 minutes by GitHub Actions';
   if (!DATA.loaded) return;
   if (!DATA.pets) {
-    box.innerHTML = '<div class="empty-card">No saved tracker data found. This fills in once the page is on GitHub Pages and the hourly job has run.</div>';
+    box.innerHTML = '<div class="empty-card">No saved tracker data found. This fills in once the page is on GitHub Pages and the background job has run.</div>';
     return;
   }
   // Lvl 200 Golden Dragons can't gain XP, so they're left out
@@ -985,7 +985,7 @@ function renderTracker() {
     .filter(([, t]) => !(t.type === 'GOLDEN_DRAGON' && t.history[t.history.length - 1][1] >= XP_200))
     .sort(([, a], [, b]) => (b.type === 'GOLDEN_DRAGON') - (a.type === 'GOLDEN_DRAGON') || b.history[b.history.length - 1][1] - a.history[a.history.length - 1][1]);
   if (!order.length && !list.length) {
-    box.innerHTML = '<div class="empty-card">The hourly job hasn’t recorded any pets yet. Check that <span class="mono">config.json</span> has the right username and that the pets are in the pets menu.</div>';
+    box.innerHTML = '<div class="empty-card">The background job hasn’t recorded any pets yet. Check that <span class="mono">config.json</span> has the right username and that the pets are in the pets menu.</div>';
     return;
   }
   // One group per account, so each player's pets are tracked and shown separately
@@ -1042,7 +1042,7 @@ document.addEventListener('visibilitychange', () => {
   }
   renderStatus();
 });
-setInterval(() => { if (!document.hidden) loadData(); }, 10 * 60e3);   // pick up each hourly save
+setInterval(() => { if (!document.hidden) loadData(); }, 10 * 60e3);   // pick up each background save
 setInterval(() => {
   document.querySelectorAll('[data-ago]').forEach(el => { el.textContent = ago(+el.dataset.ago); });
   document.querySelectorAll('[data-until]').forEach(el => { el.textContent = until(+el.dataset.until); });

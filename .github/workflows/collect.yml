@@ -1,9 +1,12 @@
 name: Collect SkyBlock data
 
 on:
+  # The every-15-minutes runs come from an outside scheduler (cron-job.org) calling the
+  # workflow_dispatch API, because GitHub's own schedule can skip runs for hours (see README).
+  # This hourly schedule is only a backup in case the outside scheduler stops.
   schedule:
-      - cron: "2,17,32,47 * * * *"   # every 15 minutes. GitHub sometimes starts it a few minutes late.
-  workflow_dispatch:           # adds a "Run workflow" button on the Actions tab
+      - cron: "37 * * * *"
+  workflow_dispatch:           # the "Run workflow" button, and what the outside scheduler calls
   push:
     branches: [main]           # redeploy the site when you edit a file (doesn't collect)
 
