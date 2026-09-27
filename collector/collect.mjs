@@ -15,7 +15,7 @@ const KEY = (process.env.HYPIXEL_API_KEY || '').trim();
 const NOW = Date.now();
 const HOUR = 36e5, DAY = 24 * HOUR;
 const KEEP = 120 * DAY;              // how much bazaar and Golden Dragon price history to keep
-const PLAYER_GAP = 50 * 60e3;        // Hypixel asks for no more than one request per player per hour
+const PLAYER_GAP = 12 * 60e3;        // check each player at most every ~15 min (Hypixel suggests once an hour)
 const IDLE_POINT = 6 * HOUR;         // save a pet point at least this often even when its XP hasn't moved
 const XP_100 = 25353230, XP_PER_LEVEL = 1886700, XP_200 = XP_100 + 100 * XP_PER_LEVEL;
 
