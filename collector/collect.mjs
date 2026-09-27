@@ -1,10 +1,11 @@
-// Hourly SkyBlock data collector for the GDrag Flip Board.
-// GitHub Actions runs this every hour (Node 20+, no dependencies). It writes small JSON files
+// SkyBlock data collector for the GDrag Flip Board.
+// GitHub Actions runs this every 15 minutes (Node 20+, no dependencies). It writes small JSON files
 // into data/, which the web page reads, so history keeps building while nobody has the page open.
 //
 //   data/pets.json    XP snapshots for tracked pets (needs the HYPIXEL_API_KEY secret)
-//   data/bazaar.json  hourly buy order / sell order for the items in config.json
-//   data/gdrag.json   hourly cheapest clean Lvl 200 Golden Dragon and best profit per level
+//   data/bazaar.json  buy order / sell order for the items in config.json
+//   data/gdrag.json   cheapest clean Lvl 200 Golden Dragon and best profit per level
+//   data/mp.json      magical power (accessory power) of the players in config.json's mpPlayers
 //   data/status.json  when the job last ran and anything that went wrong
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -76,6 +77,13 @@ function parseNBT(buf) {
   return pl(t);
 }
 
+// One profiles request per player per run, shared by the pet tracker and the MP leaderboard.
+const profileCache = new Map();
+function getProfiles(uuid) {
+  if (!profileCache.has(uuid)) profileCache.set(uuid, getJSON(`${API}/profiles?uuid=${uuid}`, { 'API-Key': KEY }));
+  return profileCache.get(uuid);
+}
+
 // ---------- pets ----------
 async function resolvePlayer(entry, known) {
   const raw = String(entry).trim(), plain = raw.replace(/-/g, '').toLowerCase();
@@ -110,8 +118,8 @@ async function collectPets(config, log) {
       if (!order.includes(who.uuid)) order.push(who.uuid);
       const pl = (store.players[who.uuid] ||= {});
       pl.name = who.name;
-      if (NOW - (pl.checked || 0) < PLAYER_GAP) { log.notes.push(`pets: ${who.name} was checked under an hour ago, skipped.`); continue; }
-      const j = await getJSON(`${API}/profiles?uuid=${who.uuid}`, { 'API-Key': KEY });
+      if (NOW - (pl.checked || 0) < PLAYER_GAP) { log.notes.push(`pets: ${who.name} was checked under ${PLAYER_GAP / 60e3} minutes ago, skipped.`); continue; }
+      const j = await getProfiles(who.uuid);
       pl.checked = NOW;
       let n = 0;
       for (const prof of j.profiles || []) {
@@ -149,6 +157,52 @@ async function collectPets(config, log) {
     if (t.type === 'GOLDEN_DRAGON' && (t.history.at(-1)?.[1] ?? 0) >= XP_200) delete store.pets[id];
   }
   store.order = [...order, ...(store.order || []).filter(u => !order.includes(u) && store.players[u])];
+  store.updated = NOW;
+  return store;
+}
+
+// ---------- MP leaderboard ----------
+// Hypixel keeps the highest magical power each profile has reached in accessory_bag_storage.
+// The player's selected profile is used, falling back to their best profile.
+function readMp(j, uuid) {
+  const rows = (j.profiles || []).map(prof => {
+    const bag = prof.members?.[uuid]?.accessory_bag_storage;
+    return { mp: Number(bag?.highest_magical_power) || 0, power: bag?.selected_power || null, profile: prof.cute_name || '', selected: !!prof.selected };
+  }).filter(r => r.mp > 0);
+  return rows.find(r => r.selected) || rows.sort((a, b) => b.mp - a.mp)[0] || null;
+}
+async function collectMp(config, log) {
+  const store = await readJSON('data/mp.json', {});
+  store.players ||= {};
+  const players = (config.mpPlayers || []).filter(Boolean);
+  if (!players.length) return store;
+  if (!KEY) { log.errors.push('mp: The HYPIXEL_API_KEY repository secret isn\'t set, so magical power wasn\'t checked.'); return store; }
+  const order = [];
+  let resolvedAll = true;
+  for (const entry of players) {
+    let who;
+    try {
+      who = await resolvePlayer(entry, store.players);
+      if (!order.includes(who.uuid)) order.push(who.uuid);
+      const pl = (store.players[who.uuid] ||= { history: [] });
+      pl.name = who.name;
+      if (NOW - (pl.checked || 0) < PLAYER_GAP) continue;
+      const r = readMp(await getProfiles(who.uuid), who.uuid);
+      pl.checked = NOW;
+      if (!r) { pl.mp = null; log.notes.push(`mp: ${who.name} has no magical power on record.`); continue; }
+      Object.assign(pl, { mp: r.mp, power: r.power, profile: r.profile });
+      const last = pl.history[pl.history.length - 1];
+      if (!last || last[1] !== r.mp || NOW - last[0] >= IDLE_POINT) pl.history.push([NOW, r.mp]);
+      pl.history = pl.history.filter(h => h[0] >= NOW - KEEP);
+      log.notes.push(`mp: ${who.name}, ${r.mp} MP.`);
+    } catch (e) {
+      if (!who) resolvedAll = false;
+      log.errors.push(`mp: ${who ? who.name + ': ' : ''}${e.message}`);
+      if (e.fatal) break;
+    }
+  }
+  if (resolvedAll) for (const uuid of Object.keys(store.players)) if (!order.includes(uuid)) delete store.players[uuid];
+  store.order = order;
   store.updated = NOW;
   return store;
 }
@@ -233,7 +287,7 @@ async function collectGdrag(log) {
 const config = await readJSON('config.json', {});
 await mkdir(at('data/'), { recursive: true });
 const log = { notes: [], errors: [] };
-const jobs = { pets: () => collectPets(config, log), bazaar: () => collectBazaar(config, log), gdrag: () => collectGdrag(log) };
+const jobs = { pets: () => collectPets(config, log), mp: () => collectMp(config, log), bazaar: () => collectBazaar(config, log), gdrag: () => collectGdrag(log) };
 let saved = 0;
 for (const [name, job] of Object.entries(jobs)) {
   try { await writeJSON(`data/${name}.json`, await job()); saved++; }
