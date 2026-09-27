@@ -2,7 +2,7 @@ name: Collect SkyBlock data
 
 on:
   schedule:
-    - cron: "17 * * * *"      # every hour at :17 (UTC). GitHub sometimes starts it a few minutes late.
+      - cron: "2,17,32,47 * * * *"   # every 15 minutes. GitHub sometimes starts it a few minutes late.
   workflow_dispatch:           # adds a "Run workflow" button on the Actions tab
   push:
     branches: [main]           # redeploy the site when you edit a file (doesn't collect)
