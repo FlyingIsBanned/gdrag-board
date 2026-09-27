@@ -1,0 +1,59 @@
+name: Collect SkyBlock data
+
+on:
+  schedule:
+    - cron: "17 * * * *"      # every hour at :17 (UTC). GitHub sometimes starts it a few minutes late.
+  workflow_dispatch:           # adds a "Run workflow" button on the Actions tab
+  push:
+    branches: [main]           # redeploy the site when you edit a file (doesn't collect)
+
+permissions:
+  contents: write              # save the new data files back to the repo
+  pages: write                 # publish the site
+  id-token: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect data from the Hypixel API
+        if: github.event_name != 'push'
+        env:
+          HYPIXEL_API_KEY: ${{ secrets.HYPIXEL_API_KEY }}
+        run: node collector/collect.mjs
+
+      - name: Save data to the repo
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -q -m "Update data $(date -u +'%Y-%m-%d %H:%M') UTC"
+            git pull -q --rebase origin main
+            git push -q
+          fi
+
+      - name: Gather site files
+        run: |
+          mkdir -p data _site
+          cp -r index.html config.json data _site/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
