@@ -76,6 +76,7 @@ p{margin:0}
 .tile.hero .big{color:var(--gold)}
 .tile .sub{font-size:13px; color:var(--ink-2)}
 .tile .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:4px}
+.tile .tag{background:var(--surface)}
 .mini{width:100%; height:36px; display:block; margin-top:8px}
 .tile .mini-note{font-size:12px; color:var(--ink-3)}
 
@@ -90,7 +91,7 @@ p{margin:0}
 .sum-main{display:grid; gap:1px; flex:1 1 240px; min-width:0}
 .sum-title{font-family:var(--display); font-weight:600; font-size:17px}
 .sum-stat{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:14px; padding:4px 12px; border:1px solid var(--line); border-radius:999px; white-space:nowrap}
-.chev{width:9px; height:9px; border-right:2px solid var(--ink-3); border-bottom:2px solid var(--ink-3); transform:translateY(-2px) rotate(45deg); transition:transform .2s ease; margin-inline:4px 6px; flex:none}
+.chev{width:9px; height:9px; border-right:2px solid var(--ink-3); border-bottom:2px solid var(--ink-3); transform:translateY(-2px) rotate(45deg); transition:transform .2s ease; margin-inline:auto 6px; flex:none}
 .drop[open] .chev{transform:translateY(2px) rotate(225deg)}
 .drop-body{animation:drop-in .18s ease-out}
 .drop-body .note{padding:10px 16px 14px}
@@ -149,6 +150,40 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .bz-meta{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px 28px; font-size:13px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:12px}
 .bz-meta b{font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:500; color:var(--ink-2)}
 
+/* MP leaderboard */
+.mp-board{list-style:none; margin:0; padding:0; display:grid; gap:10px}
+.mp-row{position:relative; display:grid; grid-template-columns:44px 48px minmax(0,1fr) auto; grid-template-areas:"rank head who score" "bar bar bar bar";
+  gap:10px 14px; align-items:center; padding:14px 16px 12px; border:1px solid var(--line); border-radius:12px; background:var(--surface)}
+.mp-rank{grid-area:rank; font-family:var(--display); font-weight:700; font-size:22px; color:var(--ink-3); text-align:center}
+.mp-head{grid-area:head; width:48px; height:48px; border-radius:8px; background:var(--surface-2); image-rendering:pixelated}
+.mp-who{grid-area:who; display:grid; gap:2px; min-width:0}
+.mp-name{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; font-family:var(--display); font-weight:700; font-size:18px; overflow-wrap:anywhere}
+.mp-badge{font-family:var(--body); font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--surface-2); color:var(--ink-2); white-space:nowrap}
+.mp-line{font-size:14px; color:var(--ink-2); margin-top:4px; text-wrap:pretty}
+.mp-score{grid-area:score; display:grid; justify-items:end; gap:0}
+.mp-score .big{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px; font-weight:500; line-height:1.15}
+.mp-score .sub{font-size:12px; color:var(--ink-3); white-space:nowrap}
+.mp-bar{grid-area:bar; height:6px; border-radius:3px; background:var(--surface-2); overflow:hidden}
+.mp-bar i{display:block; height:100%; background:var(--ink-3); border-radius:3px}
+.mp-row.king{border:2px solid var(--gold); padding:18px 18px 14px; background:linear-gradient(120deg, var(--gold-soft), var(--surface) 70%);
+  box-shadow:0 6px 24px -12px color-mix(in srgb, var(--gold) 70%, transparent)}
+.mp-row.king .mp-rank{color:var(--gold); font-size:30px}
+.mp-row.king .mp-head{width:56px; height:56px; box-shadow:0 0 0 2px var(--gold)}
+.mp-row.king .mp-name{font-size:22px}
+.mp-row.king .mp-score .big{font-size:34px; color:var(--gold)}
+.mp-row.king .mp-badge{background:var(--gold); color:var(--surface)}
+.mp-row.king .mp-line{color:var(--ink); font-weight:500}
+.mp-row.king .mp-bar i{background:linear-gradient(90deg, var(--legend), var(--gold))}
+.mp-crown{position:absolute; top:-15px; left:22px; font-size:24px; transform:rotate(-14deg); animation:crown 3s ease-in-out infinite}
+@keyframes crown{0%,100%{transform:rotate(-14deg) translateY(0)} 50%{transform:rotate(-8deg) translateY(-3px)}}
+.mp-row.loser{border-style:dashed; border-color:color-mix(in srgb, var(--bad) 55%, transparent); background:color-mix(in srgb, var(--bad) 6%, var(--surface))}
+.mp-row.loser .mp-rank{color:var(--bad)}
+.mp-row.loser .mp-head{filter:grayscale(1); opacity:.8}
+.mp-row.loser .mp-badge{background:color-mix(in srgb, var(--bad) 16%, transparent); color:var(--bad)}
+.mp-row.loser .mp-line{color:var(--bad); font-style:italic}
+.mp-row.loser .mp-bar i{background:var(--bad)}
+.mp-row.none .mp-score .big{color:var(--ink-3)}
+
 /* pet tracker */
 .btn{font:600 14px var(--body); padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; white-space:nowrap}
 .btn:hover{border-color:var(--ink-3)}
@@ -176,11 +211,11 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
 .tracked{display:grid; gap:24px}
 .empty-card{border:1px dashed var(--line); border-radius:12px; padding:18px; color:var(--ink-2); font-size:14px}
 .owner-group{display:grid; gap:12px}
-.owner-name{display:flex; gap:10px; align-items:baseline; font-size:17px}
+.owner-name{display:flex; gap:10px; align-items:baseline; font-size:20px}
 .pet-card{border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:14px}
 .pet-card header{display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 16px; align-items:flex-start}
 .pet-card header > div{display:grid; gap:3px}
-.pet-card h3{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; font-size:19px}
+.pet-card h3{display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; font-size:17px}
 .pet-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:10px}
 .stat{background:var(--surface-2); border-radius:10px; padding:12px 14px; display:grid; gap:2px; align-content:start}
 .stat .big{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:22px; font-weight:500}
@@ -206,12 +241,26 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
   .bz-name,.spark{grid-column:1 / -1}
 }
 @media (max-width:760px){ .opt{display:none} }
+@media (max-width:560px){
+  .mp-row,.mp-row.king{grid-template-columns:24px 36px minmax(0,1fr); grid-template-areas:"rank head who" "score score score" "bar bar bar"; gap:8px 10px; padding-inline:14px}
+  .mp-head,.mp-row.king .mp-head{width:36px; height:36px}
+  .mp-rank,.mp-row.king .mp-rank{font-size:22px}
+  .mp-name{font-size:17px}
+  .mp-row.king .mp-name{font-size:19px}
+  .mp-score{justify-items:start; grid-auto-flow:column; align-items:baseline; justify-content:start; gap:8px}
+  .mp-row.king .mp-score .big{font-size:30px}
+}
 @media (max-width:520px){
   .bz-row{grid-template-columns:1fr}
   .tile .big{font-size:24px}
+  .nar,.dragon .exact{display:none}
+  th,td{padding-inline:6px}
+  th{white-space:normal}
+  .bar{width:64px}
+  .dragon .name{flex-wrap:wrap}
 }
 @media (prefers-reduced-motion: reduce){
-  .dot.live,.drop-body,.val.up,.val.down{animation:none}
+  .dot.live,.drop-body,.val.up,.val.down,.mp-crown{animation:none}
   .chev,.progress .track i{transition:none}
 }
 </style>
@@ -222,7 +271,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <div class="title">
       <p class="eyebrow">Hypixel SkyBlock · live public API</p>
       <h1>GDrag Flip Board</h1>
-      <p class="lede">Golden Dragons worth levelling to 200, bazaar prices for Derelict Ashe, Crimson Essence and Chimera I, and a pet XP tracker. Prices update live while you watch, and a background job keeps saving history every 15 minutes when nobody has it open.</p>
+      <p class="lede">Golden Dragons worth levelling to 200, bazaar prices for Derelict Ashe, Crimson Essence and Chimera I, a pet XP tracker and an MP leaderboard. Prices update live while you watch, and a background job keeps saving history every 15 minutes when nobody has it open.</p>
     </div>
     <div class="status" aria-live="polite">
       <span class="chip" id="ah-chip"><i class="dot load"></i><span>Auction house · starting</span></span>
@@ -247,7 +296,7 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
           <span class="chev" aria-hidden="true"></span>
         </summary>
         <div class="drop-body"><div class="scroll"><table id="top5">
-          <thead><tr><th>#</th><th>Dragon</th><th class="num">Price</th><th class="num">Levels to go</th><th class="num opt">XP to go</th><th class="num">Profit</th><th class="num">Profit / level</th><th class="opt">Held item</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>Dragon</th><th class="num">Price</th><th class="num nar">Levels to go</th><th class="num opt">XP to go</th><th class="num nar">Profit</th><th class="num">Profit / level</th><th class="opt">Held item</th><th></th></tr></thead>
           <tbody><tr><td class="empty" colspan="9">Waiting for the first auction house scan.</td></tr></tbody>
         </table></div></div>
       </details>
@@ -263,8 +312,8 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
             <thead><tr>
               <th aria-sort="descending"><button type="button" data-sort="exp">Dragon</button></th>
               <th class="num" aria-sort="none"><button type="button" data-sort="price">Price</button></th>
-              <th class="num" aria-sort="none"><button type="button" data-sort="lvLeft">Levels to go</button></th>
-              <th class="num" aria-sort="none"><button type="button" data-sort="profit">Profit</button></th>
+              <th class="num nar" aria-sort="none"><button type="button" data-sort="lvLeft">Levels to go</button></th>
+              <th class="num nar" aria-sort="none"><button type="button" data-sort="profit">Profit</button></th>
               <th class="num" aria-sort="none"><button type="button" data-sort="ppl">Profit / level</button></th>
               <th class="opt">Held item</th>
               <th class="num opt" aria-sort="none"><button type="button" data-sort="end">Ends in</button></th>
@@ -300,6 +349,15 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <div class="tracked" id="pt-tracked"><div class="empty-card">Loading saved tracker data…</div></div>
   </section>
 
+  <section class="panel" id="mp" aria-labelledby="mp-h">
+    <div class="section-head">
+      <h2 id="mp-h">MP Leaderboard</h2>
+      <span class="muted" id="mp-sub">Accessory bag magical power · checked every 15 minutes</span>
+    </div>
+    <p class="error" id="mp-error" role="alert" hidden></p>
+    <ol class="mp-board" id="mp-board"><li class="empty-card">Loading the leaderboard…</li></ol>
+  </section>
+
   <footer class="foot">
     <h2>How the numbers work</h2>
     <p><b>Levels to go</b> uses each pet's exact XP. From level 100 to 200 every level costs the same 1,886,700 pet XP, so a Lvl 137 that is partway to 138 needs fewer than 63 levels.</p>
@@ -307,7 +365,8 @@ button.copy:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
     <p>Only BIN listings are ranked in the top 5. Regular auctions are tagged <b>Auction</b> in the full list and show their current bid, which can still go up. <b>New</b> marks a listing that appeared in the last 15 minutes. Use <b>Copy</b> to get a <span class="mono">/viewauction</span> command you can paste in game.</p>
     <p><b>NPC profit:</b> the NPC price is 50 Enchanted Gold Blocks and one each of Perfect Amethyst, Jade, Sapphire, Amber and Topaz Gemstones at bazaar instant-buy prices, plus 500M coins. Profit is the cheapest clean Lvl 200 BIN minus that. The dragon starts at 0 XP, so profit / level uses the same 1,886,700-XP levels as the table: 214M XP to Lvl 200 counts as about 113.4 levels.</p>
     <p><b>Bazaar:</b> the buy order is the highest price someone is bidding, which is what you get if you instant-sell. The sell order is the lowest price someone is asking, which is what you pay if you instant-buy.</p>
-    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every 15 minutes, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there below Lvl 200, showing each player separately. Each player is checked at most once per run. The same job saves bazaar prices and Golden Dragon prices for the 7-day lines.</p>
+    <p><b>Pet XP tracker:</b> a GitHub Actions job runs every 15 minutes, even when nobody has this page open. It reads the pets menu of each player in <span class="mono">config.json</span> and saves the XP of every Golden Dragon there below Lvl 200, showing each player separately. Each player is checked once per run. The same job saves bazaar prices and Golden Dragon prices for the 7-day lines.</p>
+    <p><b>MP Leaderboard:</b> magical power is the highest the player has reached on their selected SkyBlock profile, as Hypixel's API reports it. The same background job checks it every 15 minutes. <b>This week</b> is the change over the last 7 days of saved checks. The players are listed under <span class="mono">mpPlayers</span> in <span class="mono">config.json</span>.</p>
     <p>Updates: the auction house API refreshes once a minute and the bazaar about every 20 seconds. The page checks right after each refresh, re-scans every auction every 5 minutes, and pauses while the tab is hidden.</p>
   </footer>
 </div>
@@ -726,9 +785,9 @@ function renderDragons() {
       <td class="rank">${i + 1}</td>
       <td>${dragonCell(d)}</td>
       <td class="num" title="${full(d.price)}">${short(d.price)}</td>
-      <td class="num">${d.lvLeft.toFixed(1)}</td>
+      <td class="num nar">${d.lvLeft.toFixed(1)}</td>
       <td class="num opt" title="${full(d.xpLeft)} XP">${short(d.xpLeft)}</td>
-      <td class="num ${tone(d.profit)}" title="${full(d.profit)}">${signed(d.profit)}</td>
+      <td class="num nar ${tone(d.profit)}" title="${full(d.profit)}">${signed(d.profit)}</td>
       <td class="num ${tone(d.ppl)}"><b>${signed(d.ppl)}</b></td>
       <td class="opt">${heldCell(d)}</td>
       <td>${copyBtn(d.uuid)}</td></tr>`).join('');
@@ -750,8 +809,8 @@ function renderDragons() {
   $('#all tbody').innerHTML = rows.length ? rows.map(d => `<tr>
       <td>${dragonCell(d)}</td>
       <td class="num" title="${full(d.price)}">${short(d.price)}</td>
-      <td class="num">${d.lvLeft.toFixed(1)}</td>
-      <td class="num ${tone(d.profit)}" title="${full(d.profit)}">${signed(d.profit)}</td>
+      <td class="num nar">${d.lvLeft.toFixed(1)}</td>
+      <td class="num nar ${tone(d.profit)}" title="${full(d.profit)}">${signed(d.profit)}</td>
       <td class="num ${tone(d.ppl)}">${signed(d.ppl)}</td>
       <td class="opt">${heldCell(d)}</td>
       <td class="num opt" data-ends="${d.end}">${endsIn(d.end)}</td>
@@ -832,15 +891,15 @@ function petLevel(type, tier, exp) {
 }
 
 const DAY = 864e5, WEEK = 7 * DAY;
-const DATA = { pets: null, bazaar: null, gdrag: null, status: null, loaded: false, loadedAt: 0 };
+const DATA = { pets: null, bazaar: null, gdrag: null, status: null, mp: null, loaded: false, loadedAt: 0 };
 async function loadData() {
   const v = Math.floor(Date.now() / 60e3);   // skip GitHub Pages' 10-minute cache
   const get = async name => {
     try { const r = await fetch(`${name}.json?v=${v}`, { cache: 'no-store' }); return r.ok ? await r.json() : null; }
     catch { return null; }
   };
-  const [pets, bazaar, gdrag, status, config] = await Promise.all(['data/pets', 'data/bazaar', 'data/gdrag', 'data/status', 'config'].map(get));
-  Object.assign(DATA, { pets, bazaar, gdrag, status, loaded: true, loadedAt: Date.now() });
+  const [pets, bazaar, gdrag, status, mp, config] = await Promise.all(['data/pets', 'data/bazaar', 'data/gdrag', 'data/status', 'data/mp', 'config'].map(get));
+  Object.assign(DATA, { pets, bazaar, gdrag, status, mp, loaded: true, loadedAt: Date.now() });
   // bazaar items come from config.json, so adding one there shows it here too
   const items = (config?.bazaar || []).filter(it => it && it.id);
   if (items.length && JSON.stringify(items.map(i => i.id)) !== JSON.stringify(BZ_ITEMS.map(i => i.id))) {
@@ -848,7 +907,7 @@ async function loadData() {
     S.bz.snapshot = 0;   // refetch so new items get prices straight away
     bzSchedule(0);
   }
-  renderCollector(); renderTracker(); renderDragons(); renderBazaar();
+  renderCollector(); renderTracker(); renderMp(); renderDragons(); renderBazaar();
 }
 function renderCollector() {
   const c = $('#col-chip'), st = DATA.status;
@@ -918,7 +977,7 @@ function dailyChart(t) {
   const days = dailyGains(t.history).slice(-14);
   const max = Math.max(1, ...days.map(d => d.end - d.start));
   const today = new Date().setHours(0, 0, 0, 0);
-  const best = days.reduce((b, d) => (d.end - d.start > (b ? b.end - b.start : 0) ? d : b), null);
+  const best = days.filter(d => d.seen).length > 1 ? days.reduce((b, d) => (d.end - d.start > (b ? b.end - b.start : 0) ? d : b), null) : null;
   const cols = days.map(d => {
     const g = d.end - d.start, lv = petLevel(t.type, t.tier, d.end).exact - petLevel(t.type, t.tier, d.start).exact;
     const label = new Date(d.day).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -999,6 +1058,89 @@ function renderTracker() {
         : `<div class="empty-card">No Golden Dragons below Lvl 200 found in ${esc(name)}’s pets menu${players[u]?.checked ? '' : ' yet'}.</div>`}
     </section>`;
   }).join('');
+}
+
+// ---------- MP leaderboard ----------
+// {gap} = lead over second place, {behind} = distance to first, {mp} = their own MP
+const BRAGS = [
+  'Leads by {gap} MP. Everyone else is just an accessory.',
+  '{gap} MP clear at the top. Bow down.',
+  'Sitting on {mp} MP like a throne. Kneel.',
+  '{gap} MP ahead. The accessory bag is fuller than your wallets.',
+  'Top of the board by {gap} MP. Screenshot it, it’s basically a trophy.',
+  'Undisputed. {gap} MP of pure flex.',
+];
+const TAUNTS = [
+  '{behind} MP behind first. Have you tried buying an accessory?',
+  'Dead last, {behind} MP off the pace. The accessory bag has an echo in there.',
+  '{behind} MP behind. Even a Zombie Talisman would help at this point.',
+  'Bottom of the board. {behind} MP short and counting.',
+  '{behind} MP behind first. Maybe spend less on Golden Dragons?',
+  'Last place again. The top spot is {behind} MP away. Start walking.',
+];
+const MIDDLE = [
+  '{behind} MP off the top, {ahead} MP clear of last.',
+  'Safe from last by {ahead} MP. First is {behind} MP away.',
+];
+function pickLine(list, seed, vars) {
+  let h = 0;
+  for (const c of seed + Math.floor(Date.now() / DAY)) h = (h * 31 + c.charCodeAt(0)) >>> 0;   // new line each day
+  return list[h % list.length].replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+}
+function weekChange(hist, mp) {
+  if (!hist?.length || mp == null) return null;
+  let base = hist[0];
+  for (const h of hist) if (h[0] <= Date.now() - WEEK) base = h;
+  return hist[hist.length - 1][0] - base[0] > 0 ? mp - base[1] : null;
+}
+function renderMp() {
+  const box = $('#mp-board'), err = $('#mp-error');
+  const mpErr = (DATA.status?.errors || []).filter(e => e.startsWith('mp:')).map(e => e.slice(4));
+  err.hidden = !mpErr.length;
+  err.textContent = mpErr.join(' ');
+  if (!DATA.loaded) return;
+  const players = DATA.mp?.players || {};
+  const order = (DATA.mp?.order || []).filter(u => players[u]);
+  if (!order.length) {
+    box.innerHTML = '<li class="empty-card">No magical power saved yet. This fills in after the background job runs with <span class="mono">mpPlayers</span> set in <span class="mono">config.json</span>.</li>';
+    return;
+  }
+  const rows = order.map(u => ({ uuid: u, ...players[u] }));
+  const ranked = rows.filter(r => r.mp > 0).sort((a, b) => b.mp - a.mp);
+  const unknown = rows.filter(r => !(r.mp > 0));
+  const top = ranked[0]?.mp || 0, low = ranked[ranked.length - 1]?.mp || 0;
+  const second = ranked.find(r => r.mp < top)?.mp;
+  const allTied = ranked.length > 1 && top === low;
+  const row = (r, i) => {
+    const rank = r.mp > 0 ? 1 + ranked.filter(x => x.mp > r.mp).length : null;
+    const king = rank === 1 && !allTied;
+    const loser = r.mp > 0 && ranked.length > 1 && r.mp === low && !allTied;
+    const vars = { mp: full(r.mp), gap: full(top - (second ?? 0)), behind: full(top - r.mp), ahead: full(r.mp - low) };
+    const line = !r.mp ? 'No magical power on record. Hypixel may not have this player’s profile, or it’s never been checked.'
+      : allTied ? 'Dead heat. Nobody gets bragging rights today.'
+      : king ? (second == null ? 'Only one on the board, so first place by default. Still counts.' : pickLine(BRAGS, r.name, vars))
+      : loser ? pickLine(TAUNTS, r.name, vars) : pickLine(MIDDLE, r.name, vars);
+    const badge = king ? '<span class="mp-badge">Champion</span>' : loser ? '<span class="mp-badge">Last place</span>' : '';
+    const week = weekChange(r.history, r.mp);
+    const weekTxt = week == null ? '' : week > 0 ? `+${full(week)} this week` : week < 0 ? `−${full(-week)} this week` : 'No change this week';
+    const meta = [r.profile && `${esc(r.profile)} profile`, r.power && `${esc(pretty(r.power))} power`].filter(Boolean).join(' · ');
+    const pct = top ? clamp(100 * (r.mp || 0) / top, 0, 100) : 0;
+    return `<li class="mp-row${king ? ' king' : ''}${loser ? ' loser' : ''}${r.mp ? '' : ' none'}">
+      ${king ? '<span class="mp-crown" aria-hidden="true">👑</span>' : ''}
+      <span class="mp-rank" aria-label="${rank ? 'Rank ' + rank : 'Unranked'}">${rank ?? '–'}</span>
+      <img class="mp-head" src="https://mc-heads.net/avatar/${esc(r.uuid)}/64" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div class="mp-who">
+        <span class="mp-name">${esc(r.name || 'Unknown player')}${badge}</span>
+        ${meta ? `<span class="muted">${meta}</span>` : ''}
+        <p class="mp-line">${loser ? '🤡 ' : ''}${esc(line)}</p>
+      </div>
+      <div class="mp-score"><span class="big">${r.mp ? full(r.mp) : '—'}</span><span class="sub">MP${weekTxt ? ' · ' + weekTxt : ''}</span></div>
+      <span class="mp-bar" title="${pct.toFixed(0)}% of first place"><i style="width:${pct.toFixed(1)}%"></i></span>
+    </li>`;
+  };
+  box.innerHTML = [...ranked, ...unknown].map(row).join('');
+  const checked = Math.max(0, ...rows.map(r => r.checked || 0));
+  $('#mp-sub').textContent = `Accessory bag magical power · ${checked ? 'checked ' + ago(checked) : 'checked every 15 minutes'}`;
 }
 
 // ---------- events ----------

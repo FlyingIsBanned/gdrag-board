@@ -5,10 +5,12 @@ A live Hypixel SkyBlock board, hosted free on GitHub Pages. It shows:
 - **Golden Dragons worth levelling:** the cheapest clean Lvl 200, the top 5 by profit per level, and every Lvl 100–199 listing.
 - **Bazaar prices:** buy order and sell order for the items in `config.json`.
 - **Pet XP tracker:** XP and levels gained per day by the Golden Dragons in your pets menu, per player. Lvl 200 Golden Dragons are skipped since they can't gain more.
+- **MP Leaderboard:** magical power (accessory power) of a group of players, highest first, with bragging rights for first place and a taunt for last.
 
 Prices update live while someone has the page open. A GitHub Actions job runs **every 15 minutes, even when nobody has it open**, and saves:
 
 - pet XP
+- magical power
 - bazaar prices
 - Golden Dragon prices
 
@@ -76,6 +78,7 @@ If the token expires, the cron job starts failing (cron-job.org can email you) a
 Edit `config.json` on GitHub. The site updates within a couple of minutes.
 
 - `players`: whose pets menu to check. Put each name in its own quotes, for example `["FlyingIsntBanned", "icey_vibes"]`, not `["FlyingIsntBanned, icey_vibes"]`. Each player is tracked and shown separately and costs one API request per check.
+- `mpPlayers`: whose magical power goes on the MP Leaderboard. Same format as `players`. Each name costs one API request per check, shared with the pet tracker when the name is in both lists.
 - `petTypes`: which pet types to track, for example `"GOLDEN_DRAGON"` or `"ENDER_DRAGON"`.
 - `petUuids`: specific pets to track regardless of type.
 - `bazaar`: the bazaar items to show and record. Each needs its bazaar `id`, for example `ESSENCE_WITHER`.
